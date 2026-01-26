@@ -1,0 +1,2 @@
+# proj_bbf-palmsgig---social-media-task-marketplace
+A comprehensive marketplace platform where users can create and perform social media tasks for payment, featuring an integrated digital wallet system and bill payment services. The platform connects task creators with performers across multiple social media platforms, providing a seamless experience for earning money through social media engagement
