@@ -14,7 +14,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.shared.models.base import BaseModel
 
 if TYPE_CHECKING:
-    from src.shared.models.auth import AuthenticationMethod, AuditLog, RefreshToken
+    from src.shared.models.auth import (
+        AuditLog,
+        AuthenticationMethod,
+        RefreshToken,
+        UserSession,
+    )
 
 
 class User(BaseModel):
@@ -154,6 +159,13 @@ class User(BaseModel):
 
     audit_logs: Mapped[list["AuditLog"]] = relationship(
         "AuditLog",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    sessions: Mapped[list["UserSession"]] = relationship(
+        "UserSession",
         back_populates="user",
         cascade="all, delete-orphan",
         lazy="selectin",

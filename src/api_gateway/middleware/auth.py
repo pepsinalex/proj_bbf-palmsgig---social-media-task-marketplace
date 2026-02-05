@@ -8,6 +8,7 @@ and extracts user information from JWT tokens.
 import logging
 from typing import Optional
 
+import redis.asyncio as aioredis
 from fastapi import Request, Response
 from jose import JWTError, jwt
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -37,6 +38,17 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
     information, and sets it in the request state. Public endpoints are skipped.
     """
 
+    def __init__(self, app, redis_client: Optional[aioredis.Redis] = None):
+        """
+        Initialize authentication middleware.
+
+        Args:
+            app: FastAPI application instance
+            redis_client: Optional Redis client for token blacklist checking
+        """
+        super().__init__(app)
+        self.redis = redis_client
+
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
@@ -58,7 +70,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         token = self._extract_token(request)
 
         if token:
-            user_info = self._decode_token(token)
+            user_info = await self._decode_and_validate_token(token)
             if user_info:
                 # Set user information in request state
                 request.state.user = user_info
@@ -186,3 +198,45 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 exc_info=True,
             )
             return None
+
+    async def _decode_and_validate_token(self, token: str) -> Optional[dict]:
+        """
+        Decode and validate JWT token with blacklist checking.
+
+        Args:
+            token: JWT token string
+
+        Returns:
+            Optional[dict]: Decoded token payload if valid and not blacklisted, None otherwise
+        """
+        payload = self._decode_token(token)
+        if not payload:
+            return None
+
+        if self.redis:
+            try:
+                jti = payload.get("jti")
+                if jti:
+                    blacklist_key = f"token:blacklist:{jti}"
+                    is_blacklisted = await self.redis.exists(blacklist_key)
+
+                    if is_blacklisted:
+                        logger.warning(
+                            "Token is blacklisted",
+                            extra={
+                                "jti": jti,
+                                "user_id": payload.get("sub"),
+                            },
+                        )
+                        return None
+
+            except Exception as e:
+                logger.error(
+                    "Failed to check token blacklist",
+                    extra={
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                    },
+                )
+
+        return payload

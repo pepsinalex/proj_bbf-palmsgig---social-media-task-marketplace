@@ -283,6 +283,135 @@ class RefreshToken(BaseModel):
         self.last_used_at = datetime.utcnow()
 
 
+class UserSession(BaseModel):
+    """
+    User session model for tracking active sessions.
+
+    Stores session information including device fingerprinting, IP addresses,
+    and activity tracking. Used for session management and security monitoring.
+    """
+
+    __tablename__ = "user_sessions"
+
+    user_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    refresh_token_jti: Mapped[str] = mapped_column(
+        String(100),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+
+    device_fingerprint: Mapped[str] = mapped_column(
+        String(64),
+        nullable=False,
+        index=True,
+    )
+
+    user_agent: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+    )
+
+    ip_address: Mapped[str | None] = mapped_column(
+        String(45),
+        nullable=True,
+        index=True,
+    )
+
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        nullable=False,
+        index=True,
+    )
+
+    last_activity_at: Mapped[datetime] = mapped_column(
+        nullable=False,
+        default=datetime.utcnow,
+        index=True,
+    )
+
+    expires_at: Mapped[datetime] = mapped_column(
+        nullable=False,
+        index=True,
+    )
+
+    terminated_at: Mapped[datetime | None] = mapped_column(
+        nullable=True,
+    )
+
+    metadata: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
+    user: Mapped["User"] = relationship(
+        "User",
+        back_populates="sessions",
+    )
+
+    __table_args__ = (
+        Index("ix_user_sessions_user_active", "user_id", "is_active"),
+        Index("ix_user_sessions_user_device", "user_id", "device_fingerprint"),
+        Index("ix_user_sessions_jti", "refresh_token_jti"),
+        Index("ix_user_sessions_expiry", "expires_at", "is_active"),
+        Index("ix_user_sessions_activity", "last_activity_at"),
+    )
+
+    def __repr__(self) -> str:
+        """
+        Return string representation of the user session.
+
+        Returns:
+            String representation with class name, ID, and user ID
+        """
+        return f"<UserSession(id={self.id}, user_id={self.user_id}, active={self.is_active})>"
+
+    @property
+    def is_expired(self) -> bool:
+        """
+        Check if session is expired.
+
+        Returns:
+            True if expires_at is in the past, False otherwise
+        """
+        return self.expires_at < datetime.utcnow()
+
+    @property
+    def is_valid(self) -> bool:
+        """
+        Check if session is valid (active and not expired).
+
+        Returns:
+            True if session is valid, False otherwise
+        """
+        return self.is_active and not self.is_expired
+
+    def terminate(self) -> None:
+        """
+        Terminate the session.
+        """
+        self.is_active = False
+        self.terminated_at = datetime.utcnow()
+
+    def update_activity(self, ip_address: str | None = None) -> None:
+        """
+        Update session activity timestamp.
+
+        Args:
+            ip_address: Optional updated IP address
+        """
+        self.last_activity_at = datetime.utcnow()
+        if ip_address:
+            self.ip_address = ip_address
+
+
 class AuditLog(BaseModel):
     """
     Audit log model for tracking user actions.

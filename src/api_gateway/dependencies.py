@@ -108,18 +108,18 @@ def get_current_user_id(request: Request) -> Optional[str]:
     return user_id
 
 
-def require_authentication(request: Request) -> dict:
+def require_authentication(request: Request) -> str:
     """
     Dependency that requires authentication.
 
-    Ensures the request is authenticated and returns user information.
+    Ensures the request is authenticated and returns user ID.
     Raises 401 error if not authenticated.
 
     Args:
         request: FastAPI request object
 
     Returns:
-        dict: Authenticated user information
+        str: Authenticated user ID
 
     Raises:
         HTTPException: If user is not authenticated
@@ -141,11 +141,11 @@ def require_authentication(request: Request) -> dict:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = getattr(request.state, "user", None)
+    user_id = getattr(request.state, "user_id", None)
 
-    if not user:
+    if not user_id:
         logger.error(
-            "Authentication state inconsistent",
+            "Authentication state inconsistent - missing user_id",
             extra={
                 "path": request.url.path,
                 "method": request.method,
@@ -157,7 +157,20 @@ def require_authentication(request: Request) -> dict:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    return user
+    return user_id
+
+
+def is_authenticated(request: Request) -> bool:
+    """
+    Dependency for checking if request is authenticated.
+
+    Args:
+        request: FastAPI request object
+
+    Returns:
+        bool: True if authenticated, False otherwise
+    """
+    return getattr(request.state, "is_authenticated", False)
 
 
 def get_correlation_id(request: Request) -> str:
