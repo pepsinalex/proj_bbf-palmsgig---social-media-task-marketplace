@@ -19,6 +19,7 @@ from src.shared.config import get_settings
 from src.shared.database import check_database_health, close_database_connections
 from src.shared.redis import check_redis_health, close_redis_connections
 from src.task_management.routers import tasks_router
+from src.task_management.routers.assignment import router as assignment_router
 from src.task_management.routers.discovery import router as discovery_router
 from src.task_management.routers.task_creation import router as task_creation_router
 
@@ -229,6 +230,7 @@ def create_application() -> FastAPI:
     app.include_router(tasks_router, prefix="/api/v1")
     app.include_router(task_creation_router, prefix="/api/v1")
     app.include_router(discovery_router, prefix="/api/v1")
+    app.include_router(assignment_router, prefix="/api/v1")
 
     logger.info(
         "Task Management Service application configured",
