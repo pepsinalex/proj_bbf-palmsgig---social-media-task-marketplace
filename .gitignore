@@ -50,3 +50,6 @@ Thumbs.db
 
 # Alembic
 alembic/versions/__pycache__/
+
+# Claude CLI task files
+arvad_task_files/

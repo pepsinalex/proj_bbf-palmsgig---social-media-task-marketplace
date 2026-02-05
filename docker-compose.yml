@@ -1,0 +1,92 @@
+version: '3.9'
+
+services:
+  # API Gateway Service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: palmsgig_api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql://palmsgig:palmsgig@postgres:5432/palmsgig}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-change-in-production}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DEBUG=${DEBUG:-True}
+      - LOG_LEVEL=${LOG_LEVEL:-debug}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:8000}
+      - API_V1_PREFIX=${API_V1_PREFIX:-/api/v1}
+    volumes:
+      - ./src:/app/src
+      - ./alembic:/app/alembic
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - palmsgig-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: palmsgig_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-palmsgig}
+      POSTGRES_USER: ${POSTGRES_USER:-palmsgig}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-palmsgig}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.utf8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - palmsgig-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U palmsgig -d palmsgig"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: palmsgig_redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - palmsgig-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+networks:
+  palmsgig-network:
+    driver: bridge
+    name: palmsgig_network
+
+volumes:
+  postgres_data:
+    driver: local
+    name: palmsgig_postgres_data
+  redis_data:
+    driver: local
+    name: palmsgig_redis_data
