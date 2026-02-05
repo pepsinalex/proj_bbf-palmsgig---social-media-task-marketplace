@@ -5,19 +5,33 @@ Provides endpoints for user registration, email verification, and phone verifica
 """
 
 import logging
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api_gateway.dependencies import get_database_session, get_redis
+from src.api_gateway.dependencies import (
+    get_app_settings,
+    get_database_session,
+    get_redis,
+    require_authentication,
+)
+from src.shared.config import Settings
 from src.user_management.schemas.auth import (
+    LoginRequest,
+    LoginResponse,
+    LogoutRequest,
+    LogoutResponse,
+    RefreshTokenRequest,
+    RefreshTokenResponse,
     UserRegistration,
     UserResponse,
+    UserSessionsResponse,
     VerificationRequest,
     VerificationResponse,
 )
+from src.user_management.services.auth import AuthService
 from src.user_management.services.notification import NotificationService
 from src.user_management.services.password import PasswordService
 from src.user_management.services.user import UserService
@@ -50,6 +64,15 @@ async def get_user_service(
 ) -> UserService:
     """Dependency for user service."""
     return UserService(session=session)
+
+
+async def get_auth_service(
+    session: Annotated[AsyncSession, Depends(get_database_session)],
+    redis: Annotated[Redis, Depends(get_redis)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
+) -> AuthService:
+    """Dependency for auth service."""
+    return AuthService(db_session=session, redis_client=redis, settings=settings)
 
 
 @router.post(
@@ -353,4 +376,285 @@ async def verify_phone(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Phone verification failed. Please try again later.",
+        )
+
+
+@router.post(
+    "/login",
+    response_model=LoginResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Login user",
+    description="Authenticate user with email and password, returning JWT tokens",
+)
+async def login(
+    login_data: LoginRequest,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    request: Annotated[Any, Depends(lambda: None)],
+) -> LoginResponse:
+    """
+    Login user with email and password.
+
+    This endpoint:
+    1. Validates credentials (email and password)
+    2. Checks account status (locked, inactive)
+    3. Creates JWT access and refresh tokens
+    4. Establishes a new session with device fingerprinting
+    5. Returns tokens and user information
+
+    Args:
+        login_data: Login credentials
+        auth_service: Auth service dependency
+        request: FastAPI request object for extracting IP and user agent
+
+    Returns:
+        Login response with JWT tokens and user info
+
+    Raises:
+        HTTPException 400: If credentials are invalid
+        HTTPException 401: If account is locked or inactive
+        HTTPException 500: If login fails
+    """
+    try:
+        logger.info(f"Login attempt for email: {login_data.email}")
+
+        user_agent = None
+        ip_address = None
+
+        result = await auth_service.login(
+            email=login_data.email,
+            password=login_data.password,
+            user_agent=user_agent,
+            ip_address=ip_address,
+        )
+
+        logger.info(f"User logged in successfully: {login_data.email}")
+
+        return LoginResponse(**result)
+
+    except ValueError as e:
+        logger.warning(f"Login failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Login failed with unexpected error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Login failed. Please try again later.",
+        )
+
+
+@router.post(
+    "/logout",
+    response_model=LogoutResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Logout user",
+    description="Logout user by invalidating access and refresh tokens",
+)
+async def logout(
+    logout_data: LogoutRequest,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    access_token: Annotated[str, Depends(require_authentication)],
+) -> LogoutResponse:
+    """
+    Logout user by invalidating tokens.
+
+    This endpoint:
+    1. Validates and blacklists the access token
+    2. Optionally blacklists the refresh token
+    3. Terminates the associated session
+
+    Args:
+        logout_data: Logout request with optional refresh token
+        auth_service: Auth service dependency
+        access_token: Current access token from Authorization header
+
+    Returns:
+        Logout response with confirmation message
+
+    Raises:
+        HTTPException 401: If token is invalid
+        HTTPException 500: If logout fails
+    """
+    try:
+        logger.info("Logout attempt")
+
+        result = await auth_service.logout(
+            access_token=access_token,
+            refresh_token=logout_data.refresh_token,
+        )
+
+        logger.info("User logged out successfully")
+
+        return LogoutResponse(**result)
+
+    except ValueError as e:
+        logger.warning(f"Logout failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Logout failed with unexpected error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Logout failed. Please try again later.",
+        )
+
+
+@router.post(
+    "/refresh",
+    response_model=RefreshTokenResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Refresh tokens",
+    description="Refresh access token using a valid refresh token",
+)
+async def refresh_tokens(
+    refresh_data: RefreshTokenRequest,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    request: Annotated[Any, Depends(lambda: None)],
+) -> RefreshTokenResponse:
+    """
+    Refresh access and refresh tokens.
+
+    This endpoint:
+    1. Validates the provided refresh token
+    2. Generates new access and refresh tokens (token rotation)
+    3. Blacklists the old refresh token
+    4. Updates the session with new token information
+
+    Args:
+        refresh_data: Refresh token request
+        auth_service: Auth service dependency
+        request: FastAPI request object for extracting IP and user agent
+
+    Returns:
+        New access and refresh tokens
+
+    Raises:
+        HTTPException 401: If refresh token is invalid or expired
+        HTTPException 500: If token refresh fails
+    """
+    try:
+        logger.info("Token refresh attempt")
+
+        user_agent = None
+        ip_address = None
+
+        result = await auth_service.refresh_tokens(
+            refresh_token=refresh_data.refresh_token,
+            user_agent=user_agent,
+            ip_address=ip_address,
+        )
+
+        logger.info("Tokens refreshed successfully")
+
+        return RefreshTokenResponse(**result)
+
+    except ValueError as e:
+        logger.warning(f"Token refresh failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Token refresh failed with unexpected error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Token refresh failed. Please try again later.",
+        )
+
+
+@router.get(
+    "/sessions",
+    response_model=UserSessionsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get user sessions",
+    description="Get all active sessions for the authenticated user",
+)
+async def get_sessions(
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    user_id: Annotated[str, Depends(require_authentication)],
+) -> UserSessionsResponse:
+    """
+    Get all active sessions for the authenticated user.
+
+    This endpoint:
+    1. Validates the access token
+    2. Retrieves all active sessions for the user
+    3. Returns session information including device and activity details
+
+    Args:
+        auth_service: Auth service dependency
+        user_id: User ID from authenticated token
+
+    Returns:
+        List of active user sessions
+
+    Raises:
+        HTTPException 401: If token is invalid
+        HTTPException 500: If retrieval fails
+    """
+    try:
+        logger.info(f"Retrieving sessions for user: {user_id}")
+
+        sessions = await auth_service.get_user_sessions(user_id)
+
+        logger.info(f"Retrieved {len(sessions)} sessions for user: {user_id}")
+
+        return UserSessionsResponse(sessions=sessions)
+
+    except Exception as e:
+        logger.error(f"Failed to retrieve user sessions: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve sessions. Please try again later.",
+        )
+
+
+@router.post(
+    "/logout-all",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    summary="Logout from all devices",
+    description="Logout user from all active sessions",
+)
+async def logout_all_devices(
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+    user_id: Annotated[str, Depends(require_authentication)],
+) -> dict:
+    """
+    Logout user from all devices.
+
+    This endpoint:
+    1. Validates the access token
+    2. Terminates all active sessions for the user
+    3. Blacklists all refresh tokens
+
+    Args:
+        auth_service: Auth service dependency
+        user_id: User ID from authenticated token
+
+    Returns:
+        Dictionary with count of terminated sessions
+
+    Raises:
+        HTTPException 401: If token is invalid
+        HTTPException 500: If logout fails
+    """
+    try:
+        logger.info(f"Logout all devices for user: {user_id}")
+
+        result = await auth_service.logout_all_devices(user_id)
+
+        logger.info(f"User logged out from all devices: {user_id}")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Logout all devices failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to logout from all devices. Please try again later.",
         )

@@ -120,3 +120,70 @@ class UserResponse(BaseModel):
     updated_at: datetime = Field(..., description="Last update timestamp")
 
     model_config = {"from_attributes": True}
+
+
+class LoginRequest(BaseModel):
+    """Schema for user login request."""
+
+    email: EmailStr = Field(..., description="User email address")
+    password: str = Field(..., description="User password")
+
+
+class LoginResponse(BaseModel):
+    """Schema for login response with JWT tokens."""
+
+    access_token: str = Field(..., description="JWT access token")
+    refresh_token: str = Field(..., description="JWT refresh token")
+    token_type: str = Field(default="bearer", description="Token type")
+    expires_in: int = Field(..., description="Access token expiration time in seconds")
+    user: dict = Field(..., description="User information")
+
+
+class RefreshTokenRequest(BaseModel):
+    """Schema for token refresh request."""
+
+    refresh_token: str = Field(..., description="JWT refresh token")
+
+
+class RefreshTokenResponse(BaseModel):
+    """Schema for token refresh response."""
+
+    access_token: str = Field(..., description="New JWT access token")
+    refresh_token: str = Field(..., description="New JWT refresh token")
+    token_type: str = Field(default="bearer", description="Token type")
+    expires_in: int = Field(..., description="Access token expiration time in seconds")
+
+
+class LogoutRequest(BaseModel):
+    """Schema for logout request."""
+
+    refresh_token: Optional[str] = Field(None, description="JWT refresh token to invalidate")
+
+
+class LogoutResponse(BaseModel):
+    """Schema for logout response."""
+
+    message: str = Field(..., description="Logout confirmation message")
+    session_terminated: bool = Field(
+        default=False, description="Whether session was terminated"
+    )
+
+
+class SessionInfo(BaseModel):
+    """Schema for user session information."""
+
+    id: str = Field(..., description="Session ID")
+    device_fingerprint: str = Field(..., description="Device fingerprint hash")
+    user_agent: Optional[str] = Field(None, description="Browser user agent")
+    ip_address: Optional[str] = Field(None, description="Client IP address")
+    is_active: bool = Field(..., description="Session active status")
+    created_at: str = Field(..., description="Session creation timestamp")
+    last_activity_at: str = Field(..., description="Last activity timestamp")
+    expires_at: str = Field(..., description="Session expiration timestamp")
+    terminated_at: Optional[str] = Field(None, description="Session termination timestamp")
+
+
+class UserSessionsResponse(BaseModel):
+    """Schema for user sessions list response."""
+
+    sessions: list[SessionInfo] = Field(..., description="List of active user sessions")
