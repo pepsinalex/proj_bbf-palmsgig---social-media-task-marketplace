@@ -135,8 +135,10 @@ def create_application() -> FastAPI:
     # Register routers
     app.include_router(health_router, tags=["Health"])
 
-    # API v1 routes will be added here when available
-    # app.include_router(v1_router, prefix="/api/v1")
+    # API v1 routes
+    from src.api_gateway.routers.v1 import router as v1_router
+
+    app.include_router(v1_router)
 
     logger.info(
         "FastAPI application configured",
