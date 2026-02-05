@@ -15,7 +15,12 @@ from fastapi.responses import JSONResponse
 
 from src.api_gateway.middleware.auth import AuthenticationMiddleware
 from src.api_gateway.middleware.logging import RequestLoggingMiddleware
-from src.payment_service.routers import stripe_router, transaction_router, wallet_router
+from src.payment_service.routers import (
+    escrow_router,
+    stripe_router,
+    transaction_router,
+    wallet_router,
+)
 from src.shared.config import get_settings
 from src.shared.database import check_database_health, close_database_connections
 from src.shared.redis import check_redis_health, close_redis_connections
@@ -227,6 +232,7 @@ def create_application() -> FastAPI:
     app.include_router(wallet_router, prefix="/api/v1")
     app.include_router(transaction_router, prefix="/api/v1")
     app.include_router(stripe_router, prefix="/api/v1")
+    app.include_router(escrow_router, prefix="/api/v1")
 
     logger.info(
         "Payment Service application configured",
