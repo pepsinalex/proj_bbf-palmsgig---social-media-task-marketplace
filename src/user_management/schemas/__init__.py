@@ -10,10 +10,30 @@ from src.user_management.schemas.auth import (
     VerificationRequest,
     VerificationResponse,
 )
+from src.user_management.schemas.oauth import (
+    OAuthAuthorizationRequest,
+    OAuthAuthorizationResponse,
+    OAuthCallbackRequest,
+    OAuthCallbackResponse,
+    SocialAccountResponse,
+    AccountLinkRequest,
+    AccountLinkResponse,
+    AccountUnlinkRequest,
+    AccountUnlinkResponse,
+)
 
 __all__ = [
     "UserRegistration",
     "UserResponse",
     "VerificationRequest",
     "VerificationResponse",
+    "OAuthAuthorizationRequest",
+    "OAuthAuthorizationResponse",
+    "OAuthCallbackRequest",
+    "OAuthCallbackResponse",
+    "SocialAccountResponse",
+    "AccountLinkRequest",
+    "AccountLinkResponse",
+    "AccountUnlinkRequest",
+    "AccountUnlinkResponse",
 ]
