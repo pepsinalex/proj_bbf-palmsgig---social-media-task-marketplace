@@ -1,0 +1,99 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: palmsgig-development
+  labels:
+    name: palmsgig-development
+    environment: development
+    app: palmsgig
+    managed-by: kubectl
+  annotations:
+    description: "Development environment for PalmsGig - Social Media Task Marketplace"
+spec:
+  finalizers:
+    - kubernetes
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: palmsgig-development-quota
+  namespace: palmsgig-development
+  labels:
+    environment: development
+    app: palmsgig
+spec:
+  hard:
+    requests.cpu: "10"
+    requests.memory: 20Gi
+    limits.cpu: "20"
+    limits.memory: 40Gi
+    persistentvolumeclaims: "10"
+    services.loadbalancers: "2"
+    pods: "50"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: palmsgig-staging
+  labels:
+    name: palmsgig-staging
+    environment: staging
+    app: palmsgig
+    managed-by: kubectl
+  annotations:
+    description: "Staging environment for PalmsGig - Social Media Task Marketplace"
+spec:
+  finalizers:
+    - kubernetes
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: palmsgig-staging-quota
+  namespace: palmsgig-staging
+  labels:
+    environment: staging
+    app: palmsgig
+spec:
+  hard:
+    requests.cpu: "20"
+    requests.memory: 40Gi
+    limits.cpu: "40"
+    limits.memory: 80Gi
+    persistentvolumeclaims: "15"
+    services.loadbalancers: "3"
+    pods: "100"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: palmsgig-production
+  labels:
+    name: palmsgig-production
+    environment: production
+    app: palmsgig
+    managed-by: kubectl
+  annotations:
+    description: "Production environment for PalmsGig - Social Media Task Marketplace"
+spec:
+  finalizers:
+    - kubernetes
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: palmsgig-production-quota
+  namespace: palmsgig-production
+  labels:
+    environment: production
+    app: palmsgig
+spec:
+  hard:
+    requests.cpu: "50"
+    requests.memory: 100Gi
+    limits.cpu: "100"
+    limits.memory: 200Gi
+    persistentvolumeclaims: "20"
+    services.loadbalancers: "5"
+    pods: "200"

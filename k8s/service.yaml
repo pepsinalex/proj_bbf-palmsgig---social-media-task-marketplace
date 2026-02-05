@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: palmsgig-svc
+  namespace: palmsgig-production
+  labels:
+    app: palmsgig
+    component: backend
+    tier: application
+  annotations:
+    description: "PalmsGig internal service for backend API"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+spec:
+  type: ClusterIP
+  selector:
+    app: palmsgig
+    component: backend
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800

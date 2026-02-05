@@ -1,0 +1,76 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: palmsgig-ingress
+  namespace: palmsgig-production
+  labels:
+    app: palmsgig
+    component: backend
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+    nginx.ingress.kubernetes.io/limit-connections: "10"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://palmsgig.com,https://www.palmsgig.com"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/cors-max-age: "3600"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains";
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    cert-manager.io/acme-challenge-type: "http01"
+    nginx.ingress.kubernetes.io/enable-access-log: "true"
+    nginx.ingress.kubernetes.io/enable-rewrite-log: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.palmsgig.com
+        - palmsgig.com
+      secretName: palmsgig-tls-cert
+  rules:
+    - host: api.palmsgig.com
+      http:
+        paths:
+          - path: /api/v1
+            pathType: Prefix
+            backend:
+              service:
+                name: palmsgig-svc
+                port:
+                  number: 80
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: palmsgig-svc
+                port:
+                  number: 80
+          - path: /ready
+            pathType: Prefix
+            backend:
+              service:
+                name: palmsgig-svc
+                port:
+                  number: 80
+    - host: palmsgig.com
+      http:
+        paths:
+          - path: /api/v1
+            pathType: Prefix
+            backend:
+              service:
+                name: palmsgig-svc
+                port:
+                  number: 80

@@ -1,0 +1,16 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: palmsgig-pdb
+  namespace: palmsgig-production
+  labels:
+    app: palmsgig
+    component: backend
+  annotations:
+    description: "Pod Disruption Budget for PalmsGig to ensure high availability"
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: palmsgig
+      component: backend
