@@ -6,6 +6,7 @@ FROM python:3.11 AS builder
 LABEL maintainer="PalmsGig Team"
 LABEL description="PalmsGig - Social Media Task Marketplace"
 
+
 WORKDIR /app
 
 # Install build dependencies
