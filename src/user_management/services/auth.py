@@ -147,6 +147,39 @@ class AuthService:
                 raise ValueError("Invalid email or password")
 
             user.reset_failed_login()
+
+            # Check if MFA is enabled for the user
+            if user.mfa_enabled:
+                # Store pending MFA session in Redis (5 minutes)
+                pending_key = f"mfa:pending:{user.id}"
+                import json
+
+                pending_data = {
+                    "user_id": user.id,
+                    "email": user.email,
+                    "user_agent": user_agent,
+                    "ip_address": ip_address,
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+                await self.redis.setex(pending_key, 300, json.dumps(pending_data))
+
+                logger.info(
+                    "MFA challenge required for user",
+                    extra={"user_id": user.id, "email": user.email},
+                )
+
+                return {
+                    "mfa_required": True,
+                    "mfa_token": user.id,  # Temporary identifier for MFA flow
+                    "message": "MFA verification required",
+                    "user": {
+                        "id": user.id,
+                        "email": user.email,
+                        "username": user.username,
+                    },
+                }
+
+            # No MFA - proceed with normal login
             user.update_last_login(ip_address)
             await self.db.commit()
 
@@ -623,6 +656,147 @@ class AuthService:
         except Exception as e:
             logger.error(
                 "Failed to get user sessions",
+                extra={
+                    "user_id": user_id,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+            )
+            raise
+
+    async def complete_mfa_login(
+        self,
+        user_id: str,
+        mfa_verified: bool = True,
+    ) -> dict[str, str | dict]:
+        """
+        Complete login after successful MFA verification.
+
+        Creates tokens and session after MFA verification is complete.
+
+        Args:
+            user_id: User identifier
+            mfa_verified: Whether MFA was successfully verified (default: True)
+
+        Returns:
+            Dictionary containing access_token, refresh_token, token_type, and user info
+
+        Raises:
+            ValueError: If MFA session not found or expired
+            Exception: If login completion fails
+
+        Example:
+            >>> service = AuthService(db_session, redis_client, settings)
+            >>> result = await service.complete_mfa_login("user-123")
+        """
+        try:
+            if not mfa_verified:
+                raise ValueError("MFA verification required")
+
+            # Retrieve pending MFA session from Redis
+            pending_key = f"mfa:pending:{user_id}"
+            pending_data_json = await self.redis.get(pending_key)
+
+            if not pending_data_json:
+                logger.warning(
+                    "MFA session not found or expired",
+                    extra={"user_id": user_id},
+                )
+                raise ValueError("MFA session not found or expired. Please login again.")
+
+            import json
+
+            pending_data = json.loads(pending_data_json)
+            user_agent = pending_data.get("user_agent")
+            ip_address = pending_data.get("ip_address")
+
+            # Get user from database
+            stmt = select(User).where(User.id == user_id)
+            result = await self.db.execute(stmt)
+            user = result.scalars().first()
+
+            if not user:
+                logger.warning(
+                    "MFA login completion failed: user not found",
+                    extra={"user_id": user_id},
+                )
+                raise ValueError("User not found")
+
+            if not user.is_active:
+                logger.warning(
+                    "MFA login completion failed: account is inactive",
+                    extra={"user_id": user_id},
+                )
+                raise ValueError("Account is inactive")
+
+            # Update last login
+            user.update_last_login(ip_address)
+            await self.db.commit()
+
+            # Create tokens
+            access_token = self.jwt_service.create_access_token(
+                user_id=user.id,
+                additional_claims={
+                    "email": user.email,
+                    "is_verified": user.is_verified,
+                    "mfa_verified": True,
+                },
+            )
+
+            refresh_token = self.jwt_service.create_refresh_token(user_id=user.id)
+
+            refresh_payload = self.jwt_service.decode_token(refresh_token)
+            refresh_jti = refresh_payload.get("jti")
+
+            expires_at = datetime.utcnow() + timedelta(
+                days=self.settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS
+            )
+
+            # Create session
+            session = await self.session_service.create_session(
+                user_id=user.id,
+                refresh_token_jti=refresh_jti,
+                user_agent=user_agent,
+                ip_address=ip_address,
+                expires_at=expires_at,
+            )
+
+            # Clean up pending MFA session
+            await self.redis.delete(pending_key)
+
+            logger.info(
+                "User logged in successfully after MFA verification",
+                extra={
+                    "user_id": user.id,
+                    "email": user.email,
+                    "session_id": session.id,
+                    "ip_address": ip_address,
+                },
+            )
+
+            return {
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "token_type": "bearer",
+                "expires_in": self.settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "username": user.username,
+                    "is_verified": user.is_verified,
+                },
+            }
+
+        except ValueError as e:
+            logger.warning(
+                "MFA login completion failed: validation error",
+                extra={"user_id": user_id, "error": str(e)},
+            )
+            raise
+        except Exception as e:
+            await self.db.rollback()
+            logger.error(
+                "MFA login completion failed with unexpected error",
                 extra={
                     "user_id": user_id,
                     "error": str(e),

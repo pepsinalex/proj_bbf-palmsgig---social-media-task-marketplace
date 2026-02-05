@@ -85,9 +85,21 @@ class User(BaseModel):
         index=True,
     )
 
-    mfa_secret: Mapped[str | None] = mapped_column(
-        String(255),
+    totp_secret: Mapped[str | None] = mapped_column(
+        String(500),
         nullable=True,
+        comment="Encrypted TOTP secret for MFA",
+    )
+
+    backup_codes: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Encrypted backup recovery codes for MFA",
+    )
+
+    mfa_setup_at: Mapped[datetime | None] = mapped_column(
+        nullable=True,
+        comment="Timestamp when MFA was first enabled",
     )
 
     is_active: Mapped[bool] = mapped_column(
@@ -273,22 +285,27 @@ class User(BaseModel):
         self.phone_verified = True
         self.phone_verified_at = datetime.utcnow()
 
-    def enable_mfa(self, secret: str) -> None:
+    def enable_mfa(self, totp_secret: str, backup_codes: str) -> None:
         """
         Enable MFA for the user account.
 
         Args:
-            secret: MFA secret key
+            totp_secret: Encrypted TOTP secret key
+            backup_codes: Encrypted backup recovery codes
         """
         self.mfa_enabled = True
-        self.mfa_secret = secret
+        self.totp_secret = totp_secret
+        self.backup_codes = backup_codes
+        self.mfa_setup_at = datetime.utcnow()
 
     def disable_mfa(self) -> None:
         """
         Disable MFA for the user account.
         """
         self.mfa_enabled = False
-        self.mfa_secret = None
+        self.totp_secret = None
+        self.backup_codes = None
+        self.mfa_setup_at = None
 
     def deactivate(self) -> None:
         """
