@@ -16,6 +16,16 @@ from sqlalchemy.orm import selectinload
 from src.task_management.models.task import Task, TaskStatusEnum
 from src.task_management.models.task_history import TaskHistory
 from src.task_management.schemas.task import TaskCreate, TaskUpdate
+from src.task_management.schemas.task_creation import (
+    TaskCreationResponse,
+    TaskDraftCreate,
+    TaskPublishRequest,
+)
+from src.task_management.services.fee_service import FeeService
+from src.task_management.services.validation_service import (
+    ValidationError,
+    ValidationService,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -463,3 +473,406 @@ class TaskService:
             "service_fee": service_fee,
             "total_cost": total_cost,
         }
+
+    async def create_draft(
+        self, creator_id: str, draft_data: TaskDraftCreate
+    ) -> Task:
+        """
+        Create a task draft.
+
+        Drafts allow users to save incomplete tasks and complete them later.
+        Service fee and total cost are calculated even for drafts.
+
+        Args:
+            creator_id: ID of the user creating the draft
+            draft_data: Draft creation data
+
+        Returns:
+            Created draft task instance
+
+        Raises:
+            ValidationError: If draft validation fails
+
+        Example:
+            >>> draft = await service.create_draft(
+            ...     creator_id="user-123",
+            ...     draft_data=TaskDraftCreate(title="My Draft Task")
+            ... )
+        """
+        logger.info(
+            "Creating task draft",
+            extra={
+                "creator_id": creator_id,
+                "title": draft_data.title,
+            },
+        )
+
+        # Validate draft data
+        validation_errors = ValidationService.validate_draft(
+            draft_data.model_dump()
+        )
+        if validation_errors:
+            error_msg = "; ".join(validation_errors)
+            logger.warning(
+                "Draft validation failed",
+                extra={
+                    "creator_id": creator_id,
+                    "errors": validation_errors,
+                },
+            )
+            raise ValidationError(error_msg)
+
+        # Calculate fees if budget is provided
+        service_fee = Decimal("0.00")
+        total_cost = Decimal("0.00")
+
+        if draft_data.budget:
+            service_fee = FeeService.calculate_service_fee(draft_data.budget)
+            total_cost = FeeService.calculate_total_cost(
+                draft_data.budget, service_fee
+            )
+
+        # Create draft task
+        task = Task(
+            creator_id=creator_id,
+            title=draft_data.title,
+            description=draft_data.description or "",
+            instructions=draft_data.instructions or "",
+            platform=draft_data.platform,
+            task_type=draft_data.task_type,
+            budget=draft_data.budget or Decimal("0.00"),
+            service_fee=service_fee,
+            total_cost=total_cost,
+            max_performers=draft_data.max_performers or 0,
+            current_performers=0,
+            status=TaskStatusEnum.DRAFT,
+            target_criteria=draft_data.target_criteria,
+            expires_at=draft_data.expires_at,
+        )
+
+        self.session.add(task)
+        await self.session.flush()
+
+        # Create history entry
+        history = TaskHistory.create_entry(
+            task_id=task.id,
+            previous_status="none",
+            new_status=TaskStatusEnum.DRAFT.value,
+            changed_by=creator_id,
+            reason="Draft created",
+        )
+        self.session.add(history)
+
+        await self.session.commit()
+        await self.session.refresh(task)
+
+        logger.info(
+            "Draft created successfully",
+            extra={"task_id": task.id, "creator_id": creator_id},
+        )
+
+        return task
+
+    async def update_draft(
+        self, task_id: str, user_id: str, draft_data: TaskDraftCreate
+    ) -> Task | None:
+        """
+        Update an existing draft task.
+
+        Only tasks in DRAFT status can be updated using this method.
+        Recalculates fees if budget is updated.
+
+        Args:
+            task_id: Task identifier
+            user_id: ID of user making the update
+            draft_data: Draft update data
+
+        Returns:
+            Updated task instance if found, None otherwise
+
+        Raises:
+            ValueError: If task is not a draft or validation fails
+
+        Example:
+            >>> draft = await service.update_draft(
+            ...     task_id="task-123",
+            ...     user_id="user-456",
+            ...     draft_data=TaskDraftCreate(title="Updated Title")
+            ... )
+        """
+        logger.info(
+            "Updating draft",
+            extra={"task_id": task_id, "user_id": user_id},
+        )
+
+        task = await self.get_task(task_id)
+        if not task:
+            logger.warning(
+                "Task not found for draft update",
+                extra={"task_id": task_id},
+            )
+            return None
+
+        # Verify task is a draft
+        if task.status != TaskStatusEnum.DRAFT:
+            logger.warning(
+                "Cannot update non-draft task as draft",
+                extra={"task_id": task_id, "status": task.status.value},
+            )
+            raise ValueError(
+                f"Task is not a draft (status: {task.status.value})"
+            )
+
+        # Validate draft data
+        validation_errors = ValidationService.validate_draft(
+            draft_data.model_dump()
+        )
+        if validation_errors:
+            error_msg = "; ".join(validation_errors)
+            logger.warning(
+                "Draft update validation failed",
+                extra={
+                    "task_id": task_id,
+                    "errors": validation_errors,
+                },
+            )
+            raise ValidationError(error_msg)
+
+        # Update fields
+        task.title = draft_data.title
+
+        if draft_data.description is not None:
+            task.description = draft_data.description
+
+        if draft_data.instructions is not None:
+            task.instructions = draft_data.instructions
+
+        if draft_data.platform is not None:
+            task.platform = draft_data.platform
+
+        if draft_data.task_type is not None:
+            task.task_type = draft_data.task_type
+
+        if draft_data.budget is not None:
+            service_fee = FeeService.calculate_service_fee(draft_data.budget)
+            total_cost = FeeService.calculate_total_cost(
+                draft_data.budget, service_fee
+            )
+            task.budget = draft_data.budget
+            task.service_fee = service_fee
+            task.total_cost = total_cost
+
+        if draft_data.max_performers is not None:
+            task.max_performers = draft_data.max_performers
+
+        if draft_data.target_criteria is not None:
+            task.target_criteria = draft_data.target_criteria
+
+        if draft_data.expires_at is not None:
+            task.expires_at = draft_data.expires_at
+
+        await self.session.commit()
+        await self.session.refresh(task)
+
+        logger.info(
+            "Draft updated successfully",
+            extra={"task_id": task_id, "user_id": user_id},
+        )
+
+        return task
+
+    async def publish_task(
+        self, task_id: str, user_id: str, publish_data: TaskPublishRequest
+    ) -> Task:
+        """
+        Publish a draft task.
+
+        Validates all required fields are present and transitions task
+        to PENDING_PAYMENT status.
+
+        Args:
+            task_id: Task identifier
+            user_id: ID of user publishing the task
+            publish_data: Complete task data for publishing
+
+        Returns:
+            Published task instance
+
+        Raises:
+            ValueError: If task not found or not a draft
+            ValidationError: If validation fails
+
+        Example:
+            >>> task = await service.publish_task(
+            ...     task_id="task-123",
+            ...     user_id="user-456",
+            ...     publish_data=TaskPublishRequest(...)
+            ... )
+        """
+        logger.info(
+            "Publishing task",
+            extra={"task_id": task_id, "user_id": user_id},
+        )
+
+        task = await self.get_task(task_id)
+        if not task:
+            logger.warning(
+                "Task not found for publishing",
+                extra={"task_id": task_id},
+            )
+            raise ValueError("Task not found")
+
+        # Verify task is a draft
+        if task.status != TaskStatusEnum.DRAFT:
+            logger.warning(
+                "Cannot publish non-draft task",
+                extra={"task_id": task_id, "status": task.status.value},
+            )
+            raise ValueError(
+                f"Task is not a draft (status: {task.status.value})"
+            )
+
+        # Update task with publish data
+        task.title = publish_data.title
+        task.description = publish_data.description
+        task.instructions = publish_data.instructions
+        task.platform = publish_data.platform
+        task.task_type = publish_data.task_type
+        task.max_performers = publish_data.max_performers
+        task.target_criteria = publish_data.target_criteria
+        task.expires_at = publish_data.expires_at
+
+        # Recalculate fees
+        service_fee = FeeService.calculate_service_fee(publish_data.budget)
+        total_cost = FeeService.calculate_total_cost(
+            publish_data.budget, service_fee
+        )
+        task.budget = publish_data.budget
+        task.service_fee = service_fee
+        task.total_cost = total_cost
+
+        # Validate for publishing
+        validation_errors = ValidationService.validate_for_publish(task)
+        if validation_errors:
+            error_msg = "; ".join(validation_errors)
+            logger.warning(
+                "Task publish validation failed",
+                extra={
+                    "task_id": task_id,
+                    "errors": validation_errors,
+                },
+            )
+            raise ValidationError(error_msg)
+
+        # Update status to pending payment
+        previous_status = task.status
+        task.status = TaskStatusEnum.PENDING_PAYMENT
+
+        # Create history entry
+        history = TaskHistory.create_entry(
+            task_id=task.id,
+            previous_status=previous_status.value,
+            new_status=TaskStatusEnum.PENDING_PAYMENT.value,
+            changed_by=user_id,
+            reason="Task published, awaiting payment",
+        )
+        self.session.add(history)
+
+        await self.session.commit()
+        await self.session.refresh(task)
+
+        logger.info(
+            "Task published successfully",
+            extra={
+                "task_id": task_id,
+                "user_id": user_id,
+                "status": task.status.value,
+            },
+        )
+
+        return task
+
+    async def get_draft(self, task_id: str, user_id: str) -> Task | None:
+        """
+        Get a draft task by ID.
+
+        Only returns the task if it's a draft and belongs to the user.
+
+        Args:
+            task_id: Task identifier
+            user_id: User ID requesting the draft
+
+        Returns:
+            Task instance if found and is a draft, None otherwise
+
+        Example:
+            >>> draft = await service.get_draft("task-123", "user-456")
+        """
+        logger.debug(
+            "Fetching draft",
+            extra={"task_id": task_id, "user_id": user_id},
+        )
+
+        task = await self.get_task(task_id)
+
+        if not task:
+            logger.debug(
+                "Task not found",
+                extra={"task_id": task_id},
+            )
+            return None
+
+        # Verify ownership
+        if task.creator_id != user_id:
+            logger.warning(
+                "Unauthorized draft access attempt",
+                extra={
+                    "task_id": task_id,
+                    "user_id": user_id,
+                    "creator_id": task.creator_id,
+                },
+            )
+            return None
+
+        # Verify it's a draft
+        if task.status != TaskStatusEnum.DRAFT:
+            logger.debug(
+                "Task is not a draft",
+                extra={"task_id": task_id, "status": task.status.value},
+            )
+            return None
+
+        return task
+
+    async def list_drafts(
+        self, creator_id: str, skip: int = 0, limit: int = 20
+    ) -> tuple[list[Task], int]:
+        """
+        List all draft tasks for a user.
+
+        Args:
+            creator_id: Creator's user ID
+            skip: Number of records to skip
+            limit: Maximum number of records to return
+
+        Returns:
+            Tuple of (tasks list, total count)
+
+        Example:
+            >>> drafts, total = await service.list_drafts("user-123")
+        """
+        logger.debug(
+            "Listing drafts",
+            extra={
+                "creator_id": creator_id,
+                "skip": skip,
+                "limit": limit,
+            },
+        )
+
+        return await self.list_tasks(
+            skip=skip,
+            limit=limit,
+            creator_id=creator_id,
+            status=TaskStatusEnum.DRAFT,
+        )
