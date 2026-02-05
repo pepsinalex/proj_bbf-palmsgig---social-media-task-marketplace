@@ -563,3 +563,118 @@ class AuditLog(BaseModel):
             session_id=session_id,
             duration_ms=duration_ms,
         )
+
+
+class OAuthToken(BaseModel):
+    """
+    OAuth token storage model for secure token management.
+
+    Stores OAuth tokens with encryption for sensitive fields (access_token, refresh_token).
+    Supports token expiration tracking and refresh token management.
+    """
+
+    __tablename__ = "oauth_tokens"
+
+    user_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    provider: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        index=True,
+    )
+
+    access_token: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Encrypted OAuth access token",
+    )
+
+    refresh_token: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Encrypted OAuth refresh token",
+    )
+
+    expires_at: Mapped[datetime | None] = mapped_column(
+        nullable=True,
+        index=True,
+        comment="Access token expiration timestamp",
+    )
+
+    scope: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="OAuth scopes granted for this token",
+    )
+
+    user: Mapped["User"] = relationship(
+        "User",
+        back_populates="oauth_tokens",
+    )
+
+    __table_args__ = (
+        Index("ix_oauth_tokens_user_provider", "user_id", "provider"),
+        Index("ix_oauth_tokens_expires_at", "expires_at"),
+        Index("ix_oauth_tokens_provider", "provider"),
+    )
+
+    def __repr__(self) -> str:
+        """
+        Return string representation of the OAuth token.
+
+        Returns:
+            String representation with class name, ID, provider, and user ID
+        """
+        return f"<OAuthToken(id={self.id}, provider={self.provider}, user_id={self.user_id})>"
+
+    @property
+    def is_expired(self) -> bool:
+        """
+        Check if access token is expired.
+
+        Returns:
+            True if expires_at is in the past, False otherwise
+        """
+        if self.expires_at is None:
+            return False
+        return self.expires_at < datetime.utcnow()
+
+    @property
+    def is_valid(self) -> bool:
+        """
+        Check if token is valid (not expired).
+
+        Returns:
+            True if token is valid, False otherwise
+        """
+        return not self.is_expired
+
+    def update_tokens(
+        self,
+        access_token: str,
+        refresh_token: str | None = None,
+        expires_at: datetime | None = None,
+        scope: str | None = None,
+    ) -> None:
+        """
+        Update OAuth tokens and metadata.
+
+        Args:
+            access_token: New access token (encrypted)
+            refresh_token: New refresh token (encrypted, optional)
+            expires_at: Token expiration timestamp (optional)
+            scope: OAuth scopes (optional)
+        """
+        self.access_token = access_token
+        if refresh_token is not None:
+            self.refresh_token = refresh_token
+        if expires_at is not None:
+            self.expires_at = expires_at
+        if scope is not None:
+            self.scope = scope
+        self.updated_at = datetime.utcnow()
