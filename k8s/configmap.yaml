@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: palmsgig-config
+  namespace: palmsgig-production
+  labels:
+    app: palmsgig
+    component: backend
+    environment: production
+  annotations:
+    description: "Non-sensitive application configuration for PalmsGig"
+data:
+  API_V1_PREFIX: "/api/v1"
+  APP_NAME: "PalmsGig"
+  APP_VERSION: "0.1.0"
+  ENVIRONMENT: "production"
+  DEBUG: "False"
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  HOST: "0.0.0.0"
+  PORT: "8000"
+  WORKERS: "4"
+  CORS_ORIGINS: "https://palmsgig.com,https://api.palmsgig.com"
+  RATE_LIMIT_ENABLED: "True"
+  RATE_LIMIT_PER_MINUTE: "60"
+  RATE_LIMIT_PER_HOUR: "1000"
+  TASK_MIN_BUDGET: "5.00"
+  TASK_MAX_BUDGET: "10000.00"
+  TASK_PLATFORM_FEE_PERCENTAGE: "10.0"
+  TASK_EXPIRATION_DAYS: "30"
+  UPLOAD_MAX_SIZE_MB: "10"
+  ALLOWED_FILE_TYPES: "image/jpeg,image/png,image/gif,video/mp4"
+  STORAGE_BACKEND: "local"
+  STORAGE_PATH: "/app/uploads"
+  FEATURE_SOCIAL_LOGIN_ENABLED: "True"
+  FEATURE_PAYMENT_ENABLED: "True"
+  FEATURE_TASK_RECOMMENDATIONS_ENABLED: "True"
+  FEATURE_MFA_ENABLED: "True"
+  SESSION_COOKIE_NAME: "palmsgig_session"
+  SESSION_COOKIE_SECURE: "True"
+  SESSION_COOKIE_HTTPONLY: "True"
+  SESSION_COOKIE_SAMESITE: "lax"
+  SESSION_MAX_AGE: "86400"
+  NOTIFICATION_CHANNELS: "email,push"
+  NOTIFICATION_QUEUE: "notifications"
+  JWT_ALGORITHM: "HS256"
+  JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+  JWT_REFRESH_TOKEN_EXPIRE_DAYS: "7"
