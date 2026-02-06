@@ -13,9 +13,9 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <Link href="/" className="inline-block">
-            <h1 className="text-3xl font-bold text-sky-500">PalmsGig</h1>
+            <h1 className="text-3xl font-bold text-[#FF8F33]">PalmsGig</h1>
           </Link>
-          <h2 className="mt-6 text-2xl font-bold text-gray-900">
+          <h2 className="mt-6 text-2xl font-bold text-[#001046]">
             Welcome back
           </h2>
           <p className="mt-2 text-sm text-gray-600">
@@ -30,7 +30,7 @@ export default function LoginPage() {
         <div className="text-center">
           <Link
             href="/"
-            className="text-sm text-gray-600 hover:text-gray-900 hover:underline"
+            className="text-sm text-gray-600 hover:text-[#FF8F33] hover:underline"
           >
             ← Back to home
           </Link>

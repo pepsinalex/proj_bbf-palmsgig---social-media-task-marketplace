@@ -17,6 +17,7 @@ from src.api_gateway.middleware.auth import AuthenticationMiddleware
 from src.api_gateway.middleware.logging import RequestLoggingMiddleware
 from src.payment_service.routers import (
     escrow_router,
+    paypal_router,
     stripe_router,
     transaction_router,
     wallet_router,
@@ -232,6 +233,7 @@ def create_application() -> FastAPI:
     app.include_router(wallet_router, prefix="/api/v1")
     app.include_router(transaction_router, prefix="/api/v1")
     app.include_router(stripe_router, prefix="/api/v1")
+    app.include_router(paypal_router, prefix="/api/v1")
     app.include_router(escrow_router, prefix="/api/v1")
 
     logger.info(
