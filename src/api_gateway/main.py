@@ -6,10 +6,12 @@ This module provides the central FastAPI gateway with middleware, routing, and l
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncIterator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from src.api_gateway.exceptions import (
     authentication_error_handler,
@@ -100,6 +102,14 @@ def create_application() -> FastAPI:
         openapi_url="/openapi.json" if settings.is_development() else None,
         lifespan=lifespan,
     )
+
+    # Create uploads directory structure
+    uploads_dir = Path("uploads")
+    uploads_dir.mkdir(exist_ok=True)
+    (uploads_dir / "profiles").mkdir(exist_ok=True)
+
+    # Mount static files for uploads
+    app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
     # Configure CORS middleware
     app.add_middleware(

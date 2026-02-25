@@ -5,9 +5,13 @@ Provides endpoints for user registration, email verification, and phone verifica
 """
 
 import logging
-from typing import Annotated, Any
+import os
+import uuid
+from pathlib import Path
+from typing import Annotated, Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from pydantic import BaseModel, Field
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,6 +44,14 @@ from src.user_management.services.verification import VerificationService
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
+
+
+class ProfileUpdateRequest(BaseModel):
+    """Schema for profile update request."""
+
+    full_name: Optional[str] = Field(None, description="Full name")
+    bio: Optional[str] = Field(None, description="User bio")
+    phone_number: Optional[str] = Field(None, description="Phone number")
 
 
 async def get_password_service() -> PasswordService:
@@ -194,6 +206,8 @@ async def register_user(
             email_verified=user.email_verified,
             phone_verified=user.phone_verified,
             is_active=user.is_active,
+            bio=user.bio,
+            profile_picture=user.avatar_url,
             created_at=user.created_at,
             updated_at=user.updated_at,
         )
@@ -657,4 +671,263 @@ async def logout_all_devices(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to logout from all devices. Please try again later.",
+        )
+
+
+@router.get(
+    "/me",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get current user profile",
+    description="Get current authenticated user's profile information",
+)
+async def get_current_user_profile(
+    user_id: Annotated[str, Depends(require_authentication)],
+    user_service: Annotated[UserService, Depends(get_user_service)],
+) -> UserResponse:
+    """
+    Get current authenticated user profile.
+
+    Args:
+        user_id: User ID from authenticated token
+        user_service: User service dependency
+
+    Returns:
+        User profile information
+
+    Raises:
+        HTTPException 404: If user not found
+        HTTPException 500: If retrieval fails
+    """
+    try:
+        logger.info(f"Retrieving profile for user: {user_id}")
+
+        user = await user_service.get_user_by_id(user_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+
+        logger.info(f"Profile retrieved successfully for user: {user_id}")
+
+        return UserResponse(
+            id=str(user.id),
+            email=user.email,
+            username=user.username,
+            full_name=user.profile_data.get("full_name") if user.profile_data else None,
+            phone_number=user.phone,
+            email_verified=user.email_verified,
+            phone_verified=user.phone_verified,
+            is_active=user.is_active,
+            bio=user.bio,
+            profile_picture=user.avatar_url,
+            created_at=user.created_at,
+            updated_at=user.updated_at,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to retrieve user profile: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve profile. Please try again later.",
+        )
+
+
+@router.patch(
+    "/me",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Update current user profile",
+    description="Update current authenticated user's profile information",
+)
+async def update_current_user_profile(
+    update_data: ProfileUpdateRequest,
+    user_id: Annotated[str, Depends(require_authentication)],
+    user_service: Annotated[UserService, Depends(get_user_service)],
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+) -> UserResponse:
+    """
+    Update current authenticated user profile.
+
+    Args:
+        update_data: Profile update data
+        user_id: User ID from authenticated token
+        user_service: User service dependency
+        auth_service: Auth service dependency
+
+    Returns:
+        Updated user profile information
+
+    Raises:
+        HTTPException 404: If user not found
+        HTTPException 500: If update fails
+    """
+    try:
+        logger.info(f"Updating profile for user: {user_id}")
+
+        user = await user_service.get_user_by_id(user_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+
+        update_dict = update_data.model_dump(exclude_unset=True)
+
+        if "full_name" in update_dict:
+            if user.profile_data is None:
+                user.profile_data = {}
+            user.profile_data["full_name"] = update_dict["full_name"]
+
+        if "bio" in update_dict:
+            user.bio = update_dict["bio"]
+
+        if "phone_number" in update_dict:
+            user.phone = update_dict["phone_number"]
+
+        await auth_service.db.commit()
+        await auth_service.db.refresh(user)
+
+        logger.info(f"Profile updated successfully for user: {user_id}")
+
+        return UserResponse(
+            id=str(user.id),
+            email=user.email,
+            username=user.username,
+            full_name=user.profile_data.get("full_name") if user.profile_data else None,
+            phone_number=user.phone,
+            email_verified=user.email_verified,
+            phone_verified=user.phone_verified,
+            is_active=user.is_active,
+            bio=user.bio,
+            profile_picture=user.avatar_url,
+            created_at=user.created_at,
+            updated_at=user.updated_at,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update user profile: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update profile. Please try again later.",
+        )
+
+
+@router.post(
+    "/me/profile-picture",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Upload profile picture",
+    description="Upload profile picture for current authenticated user",
+)
+async def upload_profile_picture(
+    file: UploadFile = File(...),
+    user_id: Annotated[str, Depends(require_authentication)] = None,
+    user_service: Annotated[UserService, Depends(get_user_service)] = None,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)] = None,
+) -> UserResponse:
+    """
+    Upload profile picture for current authenticated user.
+
+    Args:
+        file: Uploaded image file
+        user_id: User ID from authenticated token
+        user_service: User service dependency
+        auth_service: Auth service dependency
+
+    Returns:
+        Updated user profile information with profile picture URL
+
+    Raises:
+        HTTPException 400: If file type or size is invalid
+        HTTPException 404: If user not found
+        HTTPException 500: If upload fails
+    """
+    try:
+        logger.info(f"Uploading profile picture for user: {user_id}")
+
+        if not file.content_type or not file.content_type.startswith("image/"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid file type. Only images are allowed (jpg, jpeg, png, webp)",
+            )
+
+        allowed_types = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
+        if file.content_type not in allowed_types:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid file type. Only jpg, jpeg, png, webp images are allowed",
+            )
+
+        file_content = await file.read()
+        file_size = len(file_content)
+        max_size = 5 * 1024 * 1024
+
+        if file_size > max_size:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File size exceeds maximum allowed size of 5MB",
+            )
+
+        user = await user_service.get_user_by_id(user_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+
+        uploads_dir = Path("uploads/profiles")
+        uploads_dir.mkdir(parents=True, exist_ok=True)
+
+        file_extension = file.content_type.split("/")[-1]
+        if file_extension == "jpeg":
+            file_extension = "jpg"
+
+        unique_filename = f"{uuid.uuid4()}-{file.filename}"
+        file_path = uploads_dir / unique_filename
+
+        try:
+            with open(file_path, "wb") as f:
+                f.write(file_content)
+        except Exception as io_error:
+            logger.error(f"Failed to save file: {io_error}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to save uploaded file",
+            )
+
+        user.avatar_url = f"/uploads/profiles/{unique_filename}"
+
+        await auth_service.db.commit()
+        await auth_service.db.refresh(user)
+
+        logger.info(f"Profile picture uploaded successfully for user: {user_id}")
+
+        return UserResponse(
+            id=str(user.id),
+            email=user.email,
+            username=user.username,
+            full_name=user.profile_data.get("full_name") if user.profile_data else None,
+            phone_number=user.phone,
+            email_verified=user.email_verified,
+            phone_verified=user.phone_verified,
+            is_active=user.is_active,
+            bio=user.bio,
+            profile_picture=user.avatar_url,
+            created_at=user.created_at,
+            updated_at=user.updated_at,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to upload profile picture: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to upload profile picture. Please try again later.",
         )
