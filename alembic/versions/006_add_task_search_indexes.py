@@ -42,12 +42,12 @@ def upgrade() -> None:
         ["creator_id", "status"],
     )
 
-    # Index for filtering by expiration (tasks that haven't expired)
+    # Index for filtering by tasks with expiration set
     op.create_index(
         "ix_tasks_expires_at_not_null",
         "tasks",
         ["expires_at"],
-        postgresql_where=sa.text("expires_at IS NOT NULL AND expires_at > NOW()"),
+        postgresql_where=sa.text("expires_at IS NOT NULL"),
     )
 
     # Index for available tasks (not full and not expired)

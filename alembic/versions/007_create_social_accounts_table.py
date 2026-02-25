@@ -54,6 +54,7 @@ def upgrade() -> None:
                 "tiktok",
                 "linkedin",
                 "youtube",
+                create_type=False,
                 name="platform_type",
             ),
             nullable=False,
