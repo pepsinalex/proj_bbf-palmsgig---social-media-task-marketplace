@@ -346,7 +346,7 @@ class UserSession(BaseModel):
         nullable=True,
     )
 
-    metadata: Mapped[dict | None] = mapped_column(
+    session_metadata: Mapped[dict | None] = mapped_column(
         JSON,
         nullable=True,
     )

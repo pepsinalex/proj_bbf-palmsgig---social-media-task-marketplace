@@ -532,7 +532,7 @@ async def list_accounts(
         account_service = AccountService(session)
 
         # Get accounts with filters
-        accounts = await account_service.list_accounts(
+        accounts = await account_service.get_user_accounts(
             user_id=user_id,
             platform=platform,
             verified_only=verified_only,

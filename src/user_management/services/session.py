@@ -143,7 +143,7 @@ class SessionService:
                 user_agent=user_agent,
                 ip_address=ip_address,
                 expires_at=expires_at,
-                metadata=metadata or {},
+                session_metadata=metadata or {},
                 is_active=True,
             )
 
@@ -654,7 +654,7 @@ class SessionService:
                 "terminated_at": session.terminated_at.isoformat()
                 if session.terminated_at
                 else None,
-                "metadata": session.metadata,
+                "metadata": session.session_metadata,
             }
 
         except Exception as e:
