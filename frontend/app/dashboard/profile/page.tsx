@@ -17,6 +17,7 @@ export default function ProfilePage() {
     profile,
     settings,
     socialAccounts,
+    walletBalance,
     isLoading,
     profileError,
     settingsError,
@@ -155,6 +156,7 @@ export default function ProfilePage() {
       {/* Profile Header */}
       <ProfileHeader
         user={profile}
+        walletBalance={walletBalance}
         isOwnProfile={true}
         onEditClick={() => {
           setActiveTab('edit');
@@ -200,7 +202,7 @@ export default function ProfilePage() {
               <div className="space-y-4">
                 <div>
                   <p className="text-sm font-medium text-gray-500">Full Name</p>
-                  <p className="mt-1 text-base text-gray-900">{profile.fullName}</p>
+                  <p className="mt-1 text-base text-gray-900">{profile.full_name}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">Email</p>

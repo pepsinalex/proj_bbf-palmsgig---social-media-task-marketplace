@@ -19,9 +19,9 @@ export interface EditProfileFormProps {
 
 export function EditProfileForm({ user, onSubmit, onCancel }: EditProfileFormProps) {
   const [formData, setFormData] = useState<ProfileFormData>({
-    fullName: user.fullName,
+    fullName: user.full_name || '',
     bio: user.bio || '',
-    profilePicture: user.profilePicture,
+    profilePicture: user.profile_picture,
   });
 
   const [profilePictureFile, setProfilePictureFile] = useState<File | undefined>(undefined);
@@ -58,7 +58,7 @@ export function EditProfileForm({ user, onSubmit, onCancel }: EditProfileFormPro
       setProfilePictureFile(undefined);
       setFormData((prev) => ({
         ...prev,
-        profilePicture: user.profilePicture,
+        profilePicture: user.profile_picture,
       }));
     }
   };
@@ -96,6 +96,8 @@ export function EditProfileForm({ user, onSubmit, onCancel }: EditProfileFormPro
     }
   };
 
+  const formInitials = (formData.fullName || user.email || 'U').charAt(0).toUpperCase();
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Profile Picture Upload */}
@@ -114,7 +116,7 @@ export function EditProfileForm({ user, onSubmit, onCancel }: EditProfileFormPro
               />
             ) : (
               <div className="flex h-24 w-24 items-center justify-center rounded-full bg-sky-100 text-2xl font-semibold text-sky-600 ring-4 ring-gray-100">
-                {formData.fullName.charAt(0).toUpperCase()}
+                {formInitials}
               </div>
             )}
           </div>

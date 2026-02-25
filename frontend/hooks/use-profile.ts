@@ -19,6 +19,7 @@ import {
   type ConnectSocialAccountRequest,
   type ProfileSettings,
 } from '@/lib/api/profile';
+import { walletApi } from '@/lib/api/wallet';
 import type { User, SocialAccount } from '@/lib/types/api';
 
 // Query keys
@@ -94,7 +95,7 @@ export function useUploadProfilePicture() {
         if (!oldData) return oldData;
         return {
           ...oldData,
-          profilePicture: data.url,
+          profile_picture: data.url,
         };
       });
 
@@ -295,22 +296,36 @@ export function useProfile() {
   const connectAccountMutation = useConnectSocialAccount();
   const disconnectAccountMutation = useDisconnectSocialAccount();
 
+  // Add wallet balance query
+  const wallet = useQuery({
+    queryKey: ['wallet'],
+    queryFn: async () => {
+      const response = await walletApi.getWallet();
+      return response.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   return {
     // Data
     profile: profile.data,
     settings: settings.data,
     socialAccounts: socialAccounts.data || [],
+    walletBalance: wallet.data?.balance,
 
     // Loading states
     isLoadingProfile: profile.isLoading,
     isLoadingSettings: settings.isLoading,
     isLoadingSocialAccounts: socialAccounts.isLoading,
-    isLoading: profile.isLoading || settings.isLoading || socialAccounts.isLoading,
+    isLoadingWallet: wallet.isLoading,
+    isLoading:
+      profile.isLoading || settings.isLoading || socialAccounts.isLoading || wallet.isLoading,
 
     // Error states
     profileError: profile.error,
     settingsError: settings.error,
     socialAccountsError: socialAccounts.error,
+    walletError: wallet.error,
 
     // Mutations
     updateProfile: updateProfileMutation.mutateAsync,
@@ -330,5 +345,6 @@ export function useProfile() {
     refetchProfile: profile.refetch,
     refetchSettings: settings.refetch,
     refetchSocialAccounts: socialAccounts.refetch,
+    refetchWallet: wallet.refetch,
   };
 }

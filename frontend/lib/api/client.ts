@@ -1,3 +1,4 @@
+import axios from 'axios';
 import type { ApiError, ApiResponse } from '../types/api';
 
 // API configuration
@@ -186,6 +187,14 @@ async function makeRequest<T>(
 
           if (!retryResponse.ok) {
             const errorData = (await retryResponse.json()) as ApiError;
+            // Extract FastAPI error message from detail field
+            if (axios.isAxiosError(errorData) && errorData.response?.data?.detail) {
+              throw new ApiClientError(
+                errorData.response.data.detail,
+                retryResponse.status,
+                'API_ERROR'
+              );
+            }
             throw new ApiClientError(
               errorData.error.message,
               retryResponse.status,
@@ -213,6 +222,14 @@ async function makeRequest<T>(
 
               if (!retryResponse.ok) {
                 const errorData = (await retryResponse.json()) as ApiError;
+                // Extract FastAPI error message from detail field
+                if (axios.isAxiosError(errorData) && errorData.response?.data?.detail) {
+                  throw new ApiClientError(
+                    errorData.response.data.detail,
+                    retryResponse.status,
+                    'API_ERROR'
+                  );
+                }
                 throw new ApiClientError(
                   errorData.error.message,
                   retryResponse.status,
@@ -232,9 +249,9 @@ async function makeRequest<T>(
 
     // Handle other error responses
     if (!response.ok) {
-      let errorData: ApiError;
+      let errorData: ApiError | { detail?: string };
       try {
-        errorData = (await response.json()) as ApiError;
+        errorData = (await response.json()) as ApiError | { detail?: string };
       } catch {
         throw new ApiClientError(
           'An unexpected error occurred',
@@ -243,20 +260,38 @@ async function makeRequest<T>(
         );
       }
 
+      // Extract FastAPI error message from detail field
+      if ('detail' in errorData && typeof errorData.detail === 'string') {
+        throw new ApiClientError(errorData.detail, response.status, 'API_ERROR');
+      }
+
+      if ('error' in errorData) {
+        throw new ApiClientError(
+          errorData.error.message,
+          response.status,
+          errorData.error.code,
+          errorData.error.details
+        );
+      }
+
       throw new ApiClientError(
-        errorData.error.message,
+        'An unexpected error occurred',
         response.status,
-        errorData.error.code,
-        errorData.error.details
+        'UNKNOWN_ERROR'
       );
     }
 
     // Parse and return successful response
     return (await response.json()) as ApiResponse<T>;
   } catch (error) {
-    // Handle network errors
+    // Handle network errors and Axios errors
     if (error instanceof ApiClientError) {
       throw error;
+    }
+
+    // Extract FastAPI error message from detail field for Axios errors
+    if (axios.isAxiosError(error) && error.response?.data?.detail) {
+      throw new Error(error.response.data.detail);
     }
 
     console.error('API request failed:', error);

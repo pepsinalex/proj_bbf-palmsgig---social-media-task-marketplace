@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use } from 'react';
+import React, { use, useState } from 'react';
 import { useTaskDetails } from '@/hooks/use-task-details';
 import { TaskHeader } from '@/components/task-details/task-header';
 import { CreatorProfile } from '@/components/task-details/creator-profile';
@@ -18,6 +18,9 @@ export default function TaskDetailsPage({ params }: PageProps) {
   const { id } = use(params);
   const { task, isLoading, error, submitProof, claimTask, isSubmitting, refetch } =
     useTaskDetails(id);
+
+  const [claimActionError, setClaimActionError] = useState<string | null>(null);
+  const [submitActionError, setSubmitActionError] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -96,9 +99,25 @@ export default function TaskDetailsPage({ params }: PageProps) {
 
   const handleClaimTask = async () => {
     try {
+      setClaimActionError(null);
       await claimTask();
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to claim task';
+      setClaimActionError(errorMessage);
+      setTimeout(() => setClaimActionError(null), 5000);
       console.error('Failed to claim task:', error);
+    }
+  };
+
+  const handleSubmitProof = async (data: { proofUrl?: string; proofDescription?: string }) => {
+    try {
+      setSubmitActionError(null);
+      await submitProof(data);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to submit proof';
+      setSubmitActionError(errorMessage);
+      setTimeout(() => setSubmitActionError(null), 5000);
+      throw error;
     }
   };
 
@@ -161,7 +180,14 @@ export default function TaskDetailsPage({ params }: PageProps) {
               />
 
               {canSubmitProof && (
-                <ProofSubmission onSubmit={submitProof} isSubmitting={isSubmitting} />
+                <div>
+                  {submitActionError && (
+                    <div className="mb-4 rounded-lg bg-red-50 p-4">
+                      <p className="text-sm text-red-600">{submitActionError}</p>
+                    </div>
+                  )}
+                  <ProofSubmission onSubmit={handleSubmitProof} isSubmitting={isSubmitting} />
+                </div>
               )}
 
               {canClaim && (
@@ -175,6 +201,9 @@ export default function TaskDetailsPage({ params }: PageProps) {
                         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                           Claim this task to begin working on it
                         </p>
+                        {claimActionError && (
+                          <p className="mt-2 text-sm text-red-600">{claimActionError}</p>
+                        )}
                       </div>
                       <Button
                         onClick={handleClaimTask}

@@ -6,27 +6,31 @@ export interface ProfileHeaderProps {
   user: User;
   isOwnProfile?: boolean;
   onEditClick?: () => void;
+  walletBalance?: number;
 }
 
 export function ProfileHeader({
   user,
   isOwnProfile = false,
   onEditClick,
+  walletBalance,
 }: ProfileHeaderProps) {
+  const initials = (user.full_name || user.email || 'U').charAt(0).toUpperCase();
+
   return (
     <div className="rounded-lg bg-white p-6 shadow-sm">
       <div className="flex items-start gap-6">
         {/* Profile Picture */}
         <div className="flex-shrink-0">
-          {user.profilePicture ? (
+          {user.profile_picture ? (
             <img
-              src={user.profilePicture}
-              alt={user.fullName}
+              src={user.profile_picture}
+              alt={user.full_name}
               className="h-24 w-24 rounded-full object-cover ring-4 ring-gray-100"
             />
           ) : (
             <div className="flex h-24 w-24 items-center justify-center rounded-full bg-sky-100 text-2xl font-semibold text-sky-600 ring-4 ring-gray-100">
-              {user.fullName.charAt(0).toUpperCase()}
+              {initials}
             </div>
           )}
         </div>
@@ -36,10 +40,10 @@ export function ProfileHeader({
           <div className="flex items-start justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-gray-900">{user.fullName}</h1>
+                <h1 className="text-2xl font-bold text-gray-900">{user.full_name}</h1>
                 {/* Verification Badges */}
                 <div className="flex gap-1">
-                  {user.emailVerified && (
+                  {user.email_verified && (
                     <span
                       className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700"
                       title="Email verified"
@@ -59,7 +63,7 @@ export function ProfileHeader({
                       Email
                     </span>
                   )}
-                  {user.phoneVerified && (
+                  {user.phone_verified && (
                     <span
                       className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700"
                       title="Phone verified"
@@ -121,7 +125,7 @@ export function ProfileHeader({
             <div>
               <p className="text-sm font-medium text-gray-500">Wallet Balance</p>
               <p className="text-lg font-semibold text-gray-900">
-                ${user.walletBalance.toFixed(2)}
+                ${(walletBalance ?? user.wallet_balance ?? 0).toFixed(2)}
               </p>
             </div>
             {user.socialAccounts && user.socialAccounts.length > 0 && (
@@ -135,7 +139,7 @@ export function ProfileHeader({
             <div>
               <p className="text-sm font-medium text-gray-500">Member Since</p>
               <p className="text-lg font-semibold text-gray-900">
-                {new Date(user.createdAt).toLocaleDateString('en-US', {
+                {new Date(user.created_at).toLocaleDateString('en-US', {
                   month: 'short',
                   year: 'numeric',
                 })}
