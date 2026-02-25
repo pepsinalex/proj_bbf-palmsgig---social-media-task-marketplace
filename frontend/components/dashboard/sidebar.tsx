@@ -1,9 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import React, { useState } from 'react';
+import { BRAND_ASSETS } from '@/lib/constants/brand';
 
 interface NavItem {
   name: string;
@@ -133,8 +135,14 @@ export function Sidebar() {
         <div className="flex h-full flex-col">
           {/* Logo */}
           <div className="flex h-16 items-center justify-between border-b border-gray-200 px-6 dark:border-gray-700">
-            <Link href="/dashboard" className="text-xl font-bold text-primary-600 dark:text-primary-400">
-              PalmsGig
+            <Link href="/dashboard" className="relative flex h-8 w-32">
+              <Image
+                src={BRAND_ASSETS.logos.horizontal.ORANGE}
+                alt="PalmsGig"
+                fill
+                className="object-contain"
+                priority
+              />
             </Link>
             <button
               onClick={() => setIsMobileMenuOpen(false)}

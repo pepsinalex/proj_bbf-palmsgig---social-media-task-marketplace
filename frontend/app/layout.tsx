@@ -5,9 +5,9 @@ import { Providers } from './providers';
 export const metadata: Metadata = {
   title: 'PalmsGig - Social Media Task Marketplace',
   description:
-    'Connect with social media influencers and complete tasks to earn rewards on PalmsGig.',
+    'PalmsGig - Connect with skilled task performers. Post tasks, earn money, and get things done efficiently.',
   viewport: 'width=device-width, initial-scale=1',
-  themeColor: '#0ea5e9',
+  themeColor: '#FF8F33',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

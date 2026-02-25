@@ -1,9 +1,20 @@
+import Image from 'next/image';
+import { BRAND_ASSETS } from '@/lib/constants/brand';
+
 export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b bg-white">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="text-2xl font-bold text-primary-600">PalmsGig</div>
+          <div className="relative h-8 w-32">
+            <Image
+              src={BRAND_ASSETS.logos.horizontal.ORANGE}
+              alt="PalmsGig"
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
           <nav className="flex gap-6">
             <a href="#features" className="text-gray-600 hover:text-gray-900">
               Features
@@ -114,8 +125,18 @@ export default function HomePage() {
       </main>
 
       <footer className="border-t bg-white py-8">
-        <div className="container mx-auto px-4 text-center text-gray-600">
-          <p>&copy; 2024 PalmsGig. All rights reserved.</p>
+        <div className="container mx-auto px-4 text-center">
+          <div className="mb-4 flex justify-center">
+            <div className="relative h-8 w-32">
+              <Image
+                src={BRAND_ASSETS.logos.horizontal.ORANGE}
+                alt="PalmsGig"
+                fill
+                className="object-contain"
+              />
+            </div>
+          </div>
+          <p className="text-gray-600">&copy; 2024 PalmsGig. All rights reserved.</p>
         </div>
       </footer>
     </div>
