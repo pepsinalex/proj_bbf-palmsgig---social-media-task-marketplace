@@ -116,6 +116,8 @@ class UserResponse(BaseModel):
     email_verified: bool = Field(default=False, description="Email verification status")
     phone_verified: bool = Field(default=False, description="Phone verification status")
     is_active: bool = Field(default=True, description="Account active status")
+    bio: Optional[str] = Field(None, description="User bio")
+    profile_picture: Optional[str] = Field(None, description="Profile picture URL")
     created_at: datetime = Field(..., description="Account creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
 

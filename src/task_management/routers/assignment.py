@@ -169,13 +169,13 @@ async def unassign_task(
 )
 async def get_user_assignments(
     user_id: str,
-    status_filter: Annotated[Optional[AssignmentStatusEnum], Query(alias="status")] = None,
-    limit: Annotated[int, Query(ge=1, le=100)] = 50,
-    offset: Annotated[int, Query(ge=0)] = 0,
     session: Annotated[AsyncSession, Depends(get_db_session)],
     assignment_service: Annotated[
         AssignmentService, Depends(get_assignment_service)
     ],
+    status_filter: Annotated[Optional[AssignmentStatusEnum], Query(alias="status")] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> UserAssignments:
     """
     Get assignments for a user with optional status filter.

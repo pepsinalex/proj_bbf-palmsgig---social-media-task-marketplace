@@ -1,7 +1,7 @@
 """Twitter OAuth 2.0 provider implementation."""
 
 import logging
-from typing import Any
+from typing import Any, Optional
 
 from src.user_management.services.oauth.base import BaseOAuthProvider, OAuthUserInfo
 
@@ -138,6 +138,3 @@ class TwitterOAuthProvider(BaseOAuthProvider):
                 exc_info=True,
             )
             raise
-
-
-from typing import Optional
