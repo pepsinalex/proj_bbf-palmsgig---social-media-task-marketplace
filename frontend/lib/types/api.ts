@@ -4,16 +4,17 @@
 export interface User {
   id: string;
   email: string;
-  fullName: string;
+  full_name: string;
   role: 'client' | 'influencer' | 'admin';
-  emailVerified: boolean;
-  phoneVerified: boolean;
-  profilePicture?: string;
+  email_verified: boolean;
+  phone_verified: boolean;
+  profile_picture?: string;
   bio?: string;
+  phone_number?: string;
   socialAccounts?: SocialAccount[];
-  walletBalance: number;
-  createdAt: string;
-  updatedAt: string;
+  wallet_balance?: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface SocialAccount {
