@@ -1,3 +1,5 @@
+@import url('https://fonts.cdnfonts.com/css/gilroy-bold');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,6 +8,9 @@
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
   --background-end-rgb: 255, 255, 255;
+  --brand-orange: 255, 143, 51;
+  --brand-navy: 0, 16, 70;
+  --brand-gray: 242, 242, 242;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,6 +28,16 @@
 
   body {
     @apply text-gray-900;
+    font-family: 'Gilroy', 'Inter', system-ui, sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Gilroy', sans-serif;
   }
 }
 

@@ -1,6 +1,8 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { LoginForm } from '@/components/auth/login-form';
+import { BRAND_ASSETS } from '@/lib/constants/brand';
 
 export const metadata: Metadata = {
   title: 'Login - PalmsGig',
@@ -13,7 +15,15 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <Link href="/" className="inline-block">
-            <h1 className="text-3xl font-bold text-[#FF8F33]">PalmsGig</h1>
+            <div className="relative mx-auto h-12 w-40">
+              <Image
+                src={BRAND_ASSETS.logos.horizontal.ORANGE}
+                alt="PalmsGig"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
           </Link>
           <h2 className="mt-6 text-2xl font-bold text-[#001046]">
             Welcome back
