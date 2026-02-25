@@ -581,3 +581,212 @@ async def list_accounts(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve accounts",
         )
+
+
+@router.post(
+    "/refresh/{platform}",
+    response_model=AccountInfo,
+    status_code=status.HTTP_200_OK,
+    summary="Refresh social media account data",
+    description="Fetch and update social media account data from platform API",
+)
+async def refresh_social_account(
+    platform: str,
+    user_id: Annotated[str, Depends(require_authentication)],
+    session: Annotated[AsyncSession, Depends(get_database_session)],
+) -> AccountInfo:
+    """
+    Refresh social media account data.
+
+    Fetches updated account information from the platform API including
+    follower count and other profile details, then updates the stored
+    account record in the database.
+
+    Args:
+        platform: Social media platform
+        user_id: Authenticated user ID from dependency
+        session: Database session
+
+    Returns:
+        Updated account information
+
+    Raises:
+        HTTPException 400: If platform is invalid or not supported
+        HTTPException 404: If account is not found
+        HTTPException 401: If token is expired or invalid
+        HTTPException 500: If refresh fails or API error
+    """
+    logger.info(
+        "Refreshing social account data",
+        extra={
+            "user_id": user_id,
+            "platform": platform,
+        },
+    )
+
+    try:
+        # Import here to avoid circular imports
+        from src.social_media.enums.platform_enums import Platform, get_platform_config
+        from src.social_media.services.account_service import AccountService
+        from src.social_media.services.platform_clients.facebook_client import (
+            FacebookClient,
+        )
+        from src.social_media.services.platform_clients.instagram_client import (
+            InstagramClient,
+        )
+        from src.social_media.services.platform_clients.twitter_client import (
+            TwitterClient,
+        )
+
+        account_service = AccountService(session)
+
+        # Get user's account for the platform
+        accounts = await account_service.get_user_accounts(
+            user_id=user_id,
+            platform=platform,
+        )
+
+        if not accounts:
+            logger.warning(
+                "Social account not found",
+                extra={
+                    "user_id": user_id,
+                    "platform": platform,
+                },
+            )
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No {platform} account found for this user",
+            )
+
+        account = accounts[0]
+
+        # Validate platform
+        try:
+            platform_enum = Platform(platform.lower())
+        except ValueError:
+            logger.warning(
+                "Invalid platform",
+                extra={
+                    "user_id": user_id,
+                    "platform": platform,
+                },
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Platform '{platform}' is not supported",
+            )
+
+        # Get access token
+        access_token = account.get_access_token()
+        if not access_token:
+            logger.warning(
+                "No access token available",
+                extra={
+                    "user_id": user_id,
+                    "platform": platform,
+                    "account_id": account.id,
+                },
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Access token not available. Please reconnect your account.",
+            )
+
+        # Check if token is expired
+        if account.is_token_expired():
+            logger.warning(
+                "Access token expired",
+                extra={
+                    "user_id": user_id,
+                    "platform": platform,
+                    "account_id": account.id,
+                },
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Access token expired. Please reconnect your account.",
+            )
+
+        # Create appropriate platform client
+        client = None
+        try:
+            if platform_enum == Platform.FACEBOOK:
+                client = FacebookClient(access_token=access_token, redis_client=None)
+            elif platform_enum == Platform.INSTAGRAM:
+                client = InstagramClient(access_token=access_token, redis_client=None)
+            elif platform_enum == Platform.TWITTER:
+                client = TwitterClient(access_token=access_token, redis_client=None)
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Platform '{platform}' does not support refresh",
+                )
+
+            # Fetch updated profile data
+            profile_data = await client.verify_account()
+
+            # Update account with fresh data
+            if profile_data.get("username"):
+                account.username = profile_data["username"]
+            if profile_data.get("display_name"):
+                account.display_name = profile_data["display_name"]
+            if profile_data.get("followers_count") is not None:
+                account.followers_count = profile_data["followers_count"]
+            if profile_data.get("profile_url"):
+                account.profile_url = profile_data["profile_url"]
+
+            # Update last verified timestamp
+            from datetime import datetime
+
+            account.last_verified_at = datetime.utcnow()
+            account.is_verified = True
+
+            await session.commit()
+            await session.refresh(account)
+
+            logger.info(
+                "Social account refreshed successfully",
+                extra={
+                    "user_id": user_id,
+                    "platform": platform,
+                    "account_id": account.id,
+                },
+            )
+
+            return AccountInfo.model_validate(account)
+
+        finally:
+            if client:
+                await client.close()
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        logger.warning(
+            "Account refresh validation failed",
+            extra={
+                "user_id": user_id,
+                "platform": platform,
+                "error": str(e),
+            },
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        logger.error(
+            "Account refresh failed",
+            extra={
+                "user_id": user_id,
+                "platform": platform,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to refresh account data",
+        )
