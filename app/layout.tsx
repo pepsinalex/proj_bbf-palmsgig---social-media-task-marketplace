@@ -1,0 +1,21 @@
+import type { Metadata } from 'next';
+import './globals.css';
+import { Providers } from './providers';
+
+export const metadata: Metadata = {
+  title: 'PalmsGig - Social Media Task Marketplace',
+  description:
+    'PalmsGig - Connect with skilled task performers. Post tasks, earn money, and get things done efficiently.',
+  viewport: 'width=device-width, initial-scale=1',
+  themeColor: '#FF8F33',
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body className="min-h-screen bg-gray-50 antialiased dark:bg-gray-900">
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
+}
