@@ -12,7 +12,7 @@ export interface FilterOption {
 export interface FilterGroup {
   id: string;
   label: string;
-  options: FilterOption[];
+  options?: FilterOption[];
   type: 'checkbox' | 'radio' | 'range';
   min?: number;
   max?: number;
