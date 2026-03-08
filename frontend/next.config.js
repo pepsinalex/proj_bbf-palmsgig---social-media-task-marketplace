@@ -1,28 +1,33 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  poweredByHeader: false,
-  compress: true,
-
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   images: {
-    formats: ['image/webp', 'image/avif'],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    domains: ['localhost', 'api.palmsgig.com'],
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'res.cloudinary.com',
-        pathname: '/dxhjpybe7/**',
+        hostname: '**',
       },
     ],
   },
-
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
+    styledComponents: true,
   },
-
   experimental: {
-    optimizePackageImports: ['react', 'react-dom'],
+    serverActions: {
+      allowedOrigins: ['localhost:3000', 'palmsgig.com'],
+    },
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:8000/api/:path*',
+      },
+    ];
   },
 };
 
