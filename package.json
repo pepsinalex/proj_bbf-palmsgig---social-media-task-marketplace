@@ -1,28 +1,21 @@
 {
-  "name": "palmsgig-frontend",
-  "version": "0.1.0",
+  "name": "palmsgig-monorepo",
+  "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "frontend",
+    "services/*"
+  ],
   "scripts": {
-    "dev": "cd frontend && npm run dev",
     "build": "cd frontend && npm run build",
-    "start": "next start",
-    "lint": "eslint .",
-    "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "dev": "cd frontend && npm run dev",
+    "start": "cd frontend && npm run start",
+    "lint": "cd frontend && npm run lint",
+    "format": "cd frontend && npm run format",
+    "typecheck": "cd frontend && npm run typecheck"
   },
-  "devDependencies": {
-    "@eslint/js": "^9.15.0",
-    "@types/node": "^20.17.0",
-    "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0",
-    "autoprefixer": "^10.4.20",
-    "eslint": "^8.57.0",
-    "eslint-config-prettier": "^9.1.0",
-    "postcss": "^8.4.49",
-    "prettier": "^3.3.0",
-    "prettier-plugin-tailwindcss": "^0.6.0",
-    "tailwindcss": "^3.4.0",
-    "typescript": "^5.6.0",
-    "typescript-eslint": "^8.15.0"
-  }
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "packageManager": "npm@10.2.3"
 }

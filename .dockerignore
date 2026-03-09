@@ -36,7 +36,7 @@ coverage/
 
 # Documentation
 docs/
-*.md
+# *.md  # Allow README.md for Railway project detection
 README*
 LICENSE
 
@@ -44,7 +44,7 @@ LICENSE
 .env
 .env.local
 docker-compose*.yml
-Dockerfile*
+# Dockerfile*
 
 # Build artifacts
 dist/
@@ -55,4 +55,4 @@ build/
 .pre-commit-config.yaml
 
 # Tests
-tests/
+# tests/  # Allow tests/ for Railway project detection
