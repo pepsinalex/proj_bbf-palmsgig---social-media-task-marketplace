@@ -44,7 +44,7 @@ LICENSE
 .env
 .env.local
 docker-compose*.yml
-Dockerfile*
+# Dockerfile*
 
 # Build artifacts
 dist/
