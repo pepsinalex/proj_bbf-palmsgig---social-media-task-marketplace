@@ -1,9 +1,9 @@
 {
   "build": {
-    "builder": "NIXPACKS"
+    "builder": "DOCKERFILE"
   },
   "deploy": {
-    "startCommand": "npm start",
+    "startCommand": "poetry run gunicorn -k uvicorn.workers.UvicornWorker -w 4 -b 0.0.0.0:$PORT src.api_gateway.main:app",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 300
   }
