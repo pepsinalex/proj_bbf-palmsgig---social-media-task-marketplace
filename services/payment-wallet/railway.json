@@ -1,12 +1,9 @@
 {
   "build": {
-    "builder": "DOCKERFILE"
+    "builder": "dockerfile",
+    "dockerfilePath": "../../Dockerfile"
   },
   "deploy": {
-    "startCommand": "poetry run uvicorn src.payment_wallet.main:app --host 0.0.0.0 --port $PORT",
-    "healthcheckPath": "/health",
-    "healthcheckTimeout": 100,
-    "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 10
+    "startCommand": "poetry run uvicorn src.payment_wallet.main:app --host 0.0.0.0 --port $PORT"
   }
 }
