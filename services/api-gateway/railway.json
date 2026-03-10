@@ -1,6 +1,10 @@
 {
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "pip install poetry && poetry config virtualenvs.create false && poetry install --no-dev"
+  },
   "deploy": {
-    "startCommand": "python -m uvicorn main:app --host 0.0.0.0 --port $PORT",
+    "startCommand": "uvicorn src.api_gateway.main:app --host 0.0.0.0 --port ${PORT:-8000}",
     "healthcheckPath": "/health"
   }
 }
