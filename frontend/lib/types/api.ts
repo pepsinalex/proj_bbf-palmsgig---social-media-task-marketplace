@@ -1,11 +1,17 @@
 // API Types for PalmsGig Platform
 
+// User role enum
+export enum UserRole {
+  EMPLOYER = 'employer',
+  EMPLOYEE = 'employee',
+}
+
 // User types
 export interface User {
   id: string;
   email: string;
   full_name: string;
-  role: 'client' | 'influencer' | 'admin';
+  role: UserRole | 'client' | 'influencer' | 'admin';
   email_verified: boolean;
   phone_verified: boolean;
   profile_picture?: string;
@@ -13,6 +19,7 @@ export interface User {
   phone_number?: string;
   socialAccounts?: SocialAccount[];
   wallet_balance?: number;
+  is_onboarded: boolean;
   created_at: string;
   updated_at: string;
 }

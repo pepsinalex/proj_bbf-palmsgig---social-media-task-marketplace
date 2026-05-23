@@ -1,14 +1,53 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { OverviewCard } from '@/components/dashboard/overview-card';
 import { ActivityFeed } from '@/components/dashboard/activity-feed';
 import { Button } from '@/components/ui/button';
+import { WelcomeModal } from '@/components/onboarding/welcome-modal';
 import { useDashboard } from '@/hooks/use-dashboard';
 import { useAuth } from '@/hooks/use-auth';
+import { useOnboarding } from '@/hooks/use-onboarding';
+import { UserRole } from '@/lib/types/api';
+
+const isOnboardingRole = (
+  role: unknown
+): role is UserRole.EMPLOYER | UserRole.EMPLOYEE =>
+  role === UserRole.EMPLOYER || role === UserRole.EMPLOYEE;
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const { stats, activities, isLoading, refresh } = useDashboard();
+  const {
+    user: profileUser,
+    shouldShowWelcome,
+    isLoading: isOnboardingLoading,
+    markOnboardingComplete,
+  } = useOnboarding();
+
+  const [isWelcomeOpen, setIsWelcomeOpen] = useState(false);
+
+  useEffect(() => {
+    if (shouldShowWelcome) {
+      setIsWelcomeOpen(true);
+    }
+  }, [shouldShowWelcome]);
+
+  const handleWelcomeComplete = async () => {
+    try {
+      await markOnboardingComplete();
+    } catch (error) {
+      console.error('Failed to mark onboarding complete:', error);
+    }
+  };
+
+  const handleWelcomeClose = () => {
+    setIsWelcomeOpen(false);
+  };
+
+  const welcomeRole = isOnboardingRole(profileUser?.role)
+    ? profileUser?.role
+    : undefined;
 
   return (
     <div className="space-y-8 font-sans">
@@ -117,6 +156,16 @@ export default function DashboardPage() {
       <section aria-label="Recent activity">
         <ActivityFeed activities={activities} loading={isLoading} />
       </section>
+
+      {!isOnboardingLoading && welcomeRole && (
+        <WelcomeModal
+          isOpen={isWelcomeOpen}
+          role={welcomeRole}
+          userName={profileUser?.full_name}
+          onClose={handleWelcomeClose}
+          onComplete={handleWelcomeComplete}
+        />
+      )}
     </div>
   );
 }

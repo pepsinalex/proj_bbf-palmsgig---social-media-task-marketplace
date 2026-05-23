@@ -1,47 +1,42 @@
 {
-  "files_created": [],
+  "files_created": [
+    "frontend/components/onboarding/welcome-modal.tsx",
+    "frontend/hooks/use-onboarding.ts"
+  ],
   "files_modified": [
-    "frontend/tailwind.config.js",
-    "frontend/app/globals.css",
-    "frontend/components/ui/button.tsx",
-    "frontend/components/ui/card.tsx",
-    "frontend/components/ui/input.tsx",
-    "frontend/components/dashboard/sidebar.tsx",
-    "frontend/app/dashboard/layout.tsx",
-    "frontend/app/dashboard/page.tsx"
+    "frontend/lib/types/api.ts",
+    "frontend/lib/validations/auth.ts",
+    "frontend/components/auth/register-form.tsx",
+    "frontend/app/dashboard/page.tsx",
+    "frontend/lib/api/profile.ts"
   ],
   "decisions": [
     {
-      "what": "Added top-level primary/secondary/gray Tailwind palettes alongside existing brand.* keys",
-      "why": "Spec required theme.extend.colors.primary (orange) and secondary (navy) scales while preserving existing brand.primary/brand.secondary tokens used by other components"
+      "what": "Extended User.role union with UserRole enum values instead of replacing the existing 'client' | 'influencer' | 'admin' union",
+      "why": "Preserves backwards compatibility with existing code referencing legacy role values while introducing the new EMPLOYER/EMPLOYEE roles required by the spec."
     },
     {
-      "what": "Used Tailwind classes (bg-primary-500, bg-secondary-900) directly in components",
-      "why": "Aligns with the new theme tokens and ensures consistent application of PalmsGig brand colors across post-login UI"
+      "what": "Kept handwritten validators in lib/validations/auth.ts rather than using zod",
+      "why": "The file's header note states zod is not in package.json; existing patterns use plain validation functions, so the new role validator follows the same convention."
     },
     {
-      "what": "Added CardTitle and CardDescription exports to card.tsx",
-      "why": "Spec required brand-consistent typography helpers; these are additive and do not break existing Card/CardHeader/CardContent/CardFooter consumers"
+      "what": "Treated 'first login' as account age within 24h in use-onboarding",
+      "why": "Spec says to detect first login by comparing created_at to the current session; a 24h window is a reasonable fresh-account window and keeps logic deterministic without persisting per-session flags."
     },
     {
-      "what": "Added optional collapsed state to Sidebar via internal state with optional controlled props",
-      "why": "Spec required supporting a collapsed icon-only display while keeping the existing zero-arg usage in dashboard layout working"
+      "what": "Bypassed the welcome modal when user.role is not EMPLOYER/EMPLOYEE",
+      "why": "Legacy roles (client/influencer/admin) have no onboarding content defined, so the modal only renders for new EMPLOYER/EMPLOYEE accounts."
     },
     {
-      "what": "Switched console.log to console.warn in dashboard layout redirect",
-      "why": "Project eslint rule no-console allows only warn/error; original log would trigger a warning"
-    },
-    {
-      "what": "Replaced apostrophe in dashboard page heading text with &apos;",
-      "why": "Prevents react/no-unescaped-entities lint issues while preserving copy"
+      "what": "Used PATCH /auth/me for completeOnboarding",
+      "why": "Spec explicitly requests PATCH /api/v1/auth/me with { is_onboarded: true }; the apiClient baseURL already includes /api/v1."
     }
   ],
   "tools_used": [
     "Read",
-    "Write",
     "Edit",
-    "TodoWrite",
-    "ToolSearch",
-    "Bash"
+    "Write",
+    "Bash",
+    "Grep"
   ]
 }

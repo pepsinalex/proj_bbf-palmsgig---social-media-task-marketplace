@@ -123,3 +123,8 @@ export async function getSocialAccountsByUserId(
 ): Promise<ApiResponse<SocialAccount[]>> {
   return apiClient.get<SocialAccount[]>(`/users/${userId}/social-accounts`);
 }
+
+// Mark the current user's onboarding as complete
+export async function completeOnboarding(): Promise<ApiResponse<User>> {
+  return apiClient.patch<User>('/auth/me', { is_onboarded: true });
+}
