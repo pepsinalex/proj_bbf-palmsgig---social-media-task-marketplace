@@ -1,45 +1,47 @@
 {
-  "files_created": [
-    "frontend/components/ui/logo.tsx"
-  ],
+  "files_created": [],
   "files_modified": [
-    "frontend/lib/constants/brand.ts",
-    "frontend/app/page.tsx",
+    "frontend/tailwind.config.js",
+    "frontend/app/globals.css",
+    "frontend/components/ui/button.tsx",
+    "frontend/components/ui/card.tsx",
+    "frontend/components/ui/input.tsx",
     "frontend/components/dashboard/sidebar.tsx",
-    "frontend/app/auth/login/page.tsx",
-    "frontend/app/auth/register/page.tsx",
-    "frontend/app/auth/forgot-password/page.tsx"
+    "frontend/app/dashboard/layout.tsx",
+    "frontend/app/dashboard/page.tsx"
   ],
   "decisions": [
     {
-      "what": "Kept brand.ts content unchanged (already matched spec) but rewrote to confirm implementation",
-      "why": "Spec required BRAND_ASSETS with horizontal/icon variants and Cloudinary f_auto,q_auto URLs, which the existing file already had verbatim"
+      "what": "Added top-level primary/secondary/gray Tailwind palettes alongside existing brand.* keys",
+      "why": "Spec required theme.extend.colors.primary (orange) and secondary (navy) scales while preserving existing brand.primary/brand.secondary tokens used by other components"
     },
     {
-      "what": "Created Logo component using next/image with onError fallback to text",
-      "why": "Spec required variant (horizontal|icon), theme (orange|navy|white) props, Next.js Image optimization, error fallback to text, alt text, and className support"
+      "what": "Used Tailwind classes (bg-primary-500, bg-secondary-900) directly in components",
+      "why": "Aligns with the new theme tokens and ensures consistent application of PalmsGig brand colors across post-login UI"
     },
     {
-      "what": "Used unoptimized prop on next/image for Cloudinary SVG logos",
-      "why": "SVG assets benefit from Cloudinary's own transformations; avoiding Next image optimizer prevents transparency/rendering issues"
+      "what": "Added CardTitle and CardDescription exports to card.tsx",
+      "why": "Spec required brand-consistent typography helpers; these are additive and do not break existing Card/CardHeader/CardContent/CardFooter consumers"
     },
     {
-      "what": "Replaced all Image+BRAND_ASSETS usages of the logo with the new <Logo /> component across landing, sidebar, login, register, and forgot-password pages",
-      "why": "Spec for each page required swapping inline Image references for the centralized Logo component to ensure brand consistency"
+      "what": "Added optional collapsed state to Sidebar via internal state with optional controlled props",
+      "why": "Spec required supporting a collapsed icon-only display while keeping the existing zero-arg usage in dashboard layout working"
     },
     {
-      "what": "Used icon variant in dashboard sidebar",
-      "why": "Spec 004 explicitly requested <Logo variant='icon' theme='orange' /> for compact sidebar display"
+      "what": "Switched console.log to console.warn in dashboard layout redirect",
+      "why": "Project eslint rule no-console allows only warn/error; original log would trigger a warning"
+    },
+    {
+      "what": "Replaced apostrophe in dashboard page heading text with &apos;",
+      "why": "Prevents react/no-unescaped-entities lint issues while preserving copy"
     }
   ],
   "tools_used": [
     "Read",
     "Write",
     "Edit",
-    "Grep",
-    "Glob",
-    "Bash",
     "TodoWrite",
-    "ToolSearch"
+    "ToolSearch",
+    "Bash"
   ]
 }

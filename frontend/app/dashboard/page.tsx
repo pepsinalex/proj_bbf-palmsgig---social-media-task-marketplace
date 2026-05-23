@@ -2,6 +2,7 @@
 
 import { OverviewCard } from '@/components/dashboard/overview-card';
 import { ActivityFeed } from '@/components/dashboard/activity-feed';
+import { Button } from '@/components/ui/button';
 import { useDashboard } from '@/hooks/use-dashboard';
 import { useAuth } from '@/hooks/use-auth';
 
@@ -10,23 +11,29 @@ export default function DashboardPage() {
   const { stats, activities, isLoading, refresh } = useDashboard();
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 font-sans">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-3xl font-bold tracking-tight text-secondary-900 dark:text-gray-50">
             Welcome back, {user?.fullName || 'User'}!
           </h1>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Here's what's happening with your account today.
+          <p className="mt-1 text-base text-gray-600 dark:text-gray-400">
+            Here&apos;s what&apos;s happening with your account today.
           </p>
         </div>
-        <button
+        <Button
+          variant="outline"
+          size="md"
           onClick={() => refresh.refreshAll()}
-          className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
           aria-label="Refresh dashboard"
         >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className="h-5 w-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -34,11 +41,14 @@ export default function DashboardPage() {
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-        </button>
-      </div>
+          <span>Refresh</span>
+        </Button>
+      </header>
 
-      {/* Overview Cards */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <section
+        aria-label="Account overview"
+        className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
+      >
         <OverviewCard
           title="Wallet Balance"
           value={stats?.walletBalance ? `$${stats.walletBalance.toFixed(2)}` : '$0.00'}
@@ -102,10 +112,11 @@ export default function DashboardPage() {
           }
           loading={isLoading}
         />
-      </div>
+      </section>
 
-      {/* Activity Feed */}
-      <ActivityFeed activities={activities} loading={isLoading} />
+      <section aria-label="Recent activity">
+        <ActivityFeed activities={activities} loading={isLoading} />
+      </section>
     </div>
   );
 }

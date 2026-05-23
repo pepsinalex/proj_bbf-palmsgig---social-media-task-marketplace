@@ -11,17 +11,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      console.log('User not authenticated, redirecting to login');
+      console.warn('User not authenticated, redirecting to login');
       router.push('/auth/login');
     }
   }, [isAuthenticated, isLoading, router]);
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="flex h-screen items-center justify-center bg-brand-gray font-sans dark:bg-gray-900">
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-primary-600 border-t-transparent"></div>
-          <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">Loading...</p>
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
+          <p className="mt-4 text-sm font-medium text-secondary-900 dark:text-gray-300">
+            Loading your dashboard...
+          </p>
         </div>
       </div>
     );
@@ -32,10 +34,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
+    <div className="flex h-screen overflow-hidden bg-brand-gray font-sans text-secondary-900 dark:bg-gray-900 dark:text-gray-50">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto lg:ml-64">
-        <div className="container mx-auto px-4 py-8 lg:px-8">{children}</div>
+      <main
+        className="flex-1 overflow-y-auto scrollbar-thin lg:ml-64"
+        aria-label="Dashboard content"
+      >
+        <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          {children}
+        </div>
       </main>
     </div>
   );
