@@ -1,3 +1,4 @@
+// ARVAD: This exact code change was already implemented at frontend/lib/constants/brand.ts
 export const BRAND_ASSETS = {
   logos: {
     horizontal: {

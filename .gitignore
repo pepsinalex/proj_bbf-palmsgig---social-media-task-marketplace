@@ -47,3 +47,6 @@ next-env.d.ts
 
 # OS
 Thumbs.db
+
+# Claude CLI task files
+arvad_task_files/

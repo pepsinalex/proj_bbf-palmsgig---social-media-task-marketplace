@@ -2,11 +2,10 @@
 
 import React, { useState, FormEvent } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { validateForgotPasswordForm, ForgotPasswordFormData } from '@/lib/validations/auth';
-import { BRAND_ASSETS } from '@/lib/constants/brand';
+import { Logo } from '@/components/ui/logo';
 
 export default function ForgotPasswordPage() {
   const [formData, setFormData] = useState<ForgotPasswordFormData>({
@@ -71,16 +70,15 @@ export default function ForgotPasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <Link href="/" className="inline-block">
-            <div className="relative mx-auto h-12 w-40">
-              <Image
-                src={BRAND_ASSETS.logos.horizontal.ORANGE}
-                alt="PalmsGig"
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
+          <Link href="/" className="inline-block" aria-label="PalmsGig home">
+            <Logo
+              variant="horizontal"
+              theme="orange"
+              width={180}
+              height={48}
+              priority
+              className="mx-auto"
+            />
           </Link>
           <h2 className="mt-6 text-2xl font-bold text-gray-900">
             Reset your password
