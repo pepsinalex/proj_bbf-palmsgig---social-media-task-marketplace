@@ -1,20 +1,11 @@
-import Image from 'next/image';
-import { BRAND_ASSETS } from '@/lib/constants/brand';
+import { Logo } from '@/components/ui/logo';
 
 export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b bg-white">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="relative h-8 w-32">
-            <Image
-              src={BRAND_ASSETS.logos.horizontal.ORANGE}
-              alt="PalmsGig"
-              fill
-              className="object-contain"
-              priority
-            />
-          </div>
+          <Logo variant="horizontal" theme="orange" width={140} height={36} priority />
           <nav className="flex gap-6">
             <a href="#features" className="text-gray-600 hover:text-gray-900">
               Features
@@ -127,14 +118,7 @@ export default function HomePage() {
       <footer className="border-t bg-white py-8">
         <div className="container mx-auto px-4 text-center">
           <div className="mb-4 flex justify-center">
-            <div className="relative h-8 w-32">
-              <Image
-                src={BRAND_ASSETS.logos.horizontal.ORANGE}
-                alt="PalmsGig"
-                fill
-                className="object-contain"
-              />
-            </div>
+            <Logo variant="horizontal" theme="orange" width={140} height={36} />
           </div>
           <p className="text-gray-600">&copy; 2024 PalmsGig. All rights reserved.</p>
         </div>

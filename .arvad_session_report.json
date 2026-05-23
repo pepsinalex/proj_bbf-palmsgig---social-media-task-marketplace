@@ -1,0 +1,45 @@
+{
+  "files_created": [
+    "frontend/components/ui/logo.tsx"
+  ],
+  "files_modified": [
+    "frontend/lib/constants/brand.ts",
+    "frontend/app/page.tsx",
+    "frontend/components/dashboard/sidebar.tsx",
+    "frontend/app/auth/login/page.tsx",
+    "frontend/app/auth/register/page.tsx",
+    "frontend/app/auth/forgot-password/page.tsx"
+  ],
+  "decisions": [
+    {
+      "what": "Kept brand.ts content unchanged (already matched spec) but rewrote to confirm implementation",
+      "why": "Spec required BRAND_ASSETS with horizontal/icon variants and Cloudinary f_auto,q_auto URLs, which the existing file already had verbatim"
+    },
+    {
+      "what": "Created Logo component using next/image with onError fallback to text",
+      "why": "Spec required variant (horizontal|icon), theme (orange|navy|white) props, Next.js Image optimization, error fallback to text, alt text, and className support"
+    },
+    {
+      "what": "Used unoptimized prop on next/image for Cloudinary SVG logos",
+      "why": "SVG assets benefit from Cloudinary's own transformations; avoiding Next image optimizer prevents transparency/rendering issues"
+    },
+    {
+      "what": "Replaced all Image+BRAND_ASSETS usages of the logo with the new <Logo /> component across landing, sidebar, login, register, and forgot-password pages",
+      "why": "Spec for each page required swapping inline Image references for the centralized Logo component to ensure brand consistency"
+    },
+    {
+      "what": "Used icon variant in dashboard sidebar",
+      "why": "Spec 004 explicitly requested <Logo variant='icon' theme='orange' /> for compact sidebar display"
+    }
+  ],
+  "tools_used": [
+    "Read",
+    "Write",
+    "Edit",
+    "Grep",
+    "Glob",
+    "Bash",
+    "TodoWrite",
+    "ToolSearch"
+  ]
+}
