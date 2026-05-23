@@ -5,10 +5,30 @@ import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { validateRegisterForm, RegisterFormData } from '@/lib/validations/auth';
+import { UserRole } from '@/lib/types/api';
 
 export interface RegisterFormProps {
   onSubmit?: (data: RegisterFormData) => Promise<void>;
 }
+
+interface RoleOption {
+  value: UserRole.EMPLOYER | UserRole.EMPLOYEE;
+  title: string;
+  description: string;
+}
+
+const ROLE_OPTIONS: RoleOption[] = [
+  {
+    value: UserRole.EMPLOYER,
+    title: 'Employer',
+    description: 'I want to post tasks and hire workers',
+  },
+  {
+    value: UserRole.EMPLOYEE,
+    title: 'Employee',
+    description: 'I want to find and complete tasks to earn money',
+  },
+];
 
 export function RegisterForm({ onSubmit }: RegisterFormProps) {
   const [formData, setFormData] = useState<RegisterFormData>({
@@ -16,6 +36,7 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
     password: '',
     confirmPassword: '',
     fullName: '',
+    role: '',
     acceptTerms: false,
   });
 
@@ -40,6 +61,20 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
       });
     }
     // Clear server error when user types
+    if (serverError) {
+      setServerError(null);
+    }
+  };
+
+  const handleRoleSelect = (role: UserRole.EMPLOYER | UserRole.EMPLOYEE) => {
+    setFormData((prev) => ({ ...prev, role }));
+    if (errors.role) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors.role;
+        return newErrors;
+      });
+    }
     if (serverError) {
       setServerError(null);
     }
@@ -142,6 +177,79 @@ export function RegisterForm({ onSubmit }: RegisterFormProps) {
         autoComplete="new-password"
         disabled={isLoading}
       />
+
+      <div>
+        <fieldset>
+          <legend className="mb-3 block text-sm font-medium text-gray-700">
+            I am joining as a <span className="text-red-500">*</span>
+          </legend>
+          <div
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+            role="radiogroup"
+            aria-label="Select your role"
+            aria-invalid={Boolean(errors.role)}
+            aria-describedby={errors.role ? 'role-error' : undefined}
+          >
+            {ROLE_OPTIONS.map((option) => {
+              const isSelected = formData.role === option.value;
+              return (
+                <label
+                  key={option.value}
+                  className={`relative flex cursor-pointer flex-col rounded-lg border-2 p-4 transition-all ${
+                    isSelected
+                      ? 'border-[#FF8F33] bg-orange-50 shadow-sm'
+                      : 'border-gray-200 bg-white hover:border-gray-300'
+                  } ${isLoading ? 'pointer-events-none opacity-60' : ''}`}
+                >
+                  <input
+                    type="radio"
+                    name="role"
+                    value={option.value}
+                    checked={isSelected}
+                    onChange={() => handleRoleSelect(option.value)}
+                    disabled={isLoading}
+                    className="sr-only"
+                    aria-label={option.title}
+                  />
+                  <div className="flex items-start justify-between">
+                    <span
+                      className={`text-base font-semibold ${
+                        isSelected ? 'text-[#001046]' : 'text-gray-900'
+                      }`}
+                    >
+                      {option.title}
+                    </span>
+                    <span
+                      className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 ${
+                        isSelected
+                          ? 'border-[#FF8F33] bg-[#FF8F33]'
+                          : 'border-gray-300 bg-white'
+                      }`}
+                      aria-hidden="true"
+                    >
+                      {isSelected && (
+                        <span className="h-2 w-2 rounded-full bg-white" />
+                      )}
+                    </span>
+                  </div>
+                  <span className="mt-1 text-sm text-gray-600">
+                    {option.description}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          {errors.role && (
+            <p
+              id="role-error"
+              className="mt-1.5 text-sm text-red-600"
+              role="alert"
+            >
+              {errors.role}
+            </p>
+          )}
+        </fieldset>
+      </div>
 
       <div>
         <label className="flex items-start space-x-3">

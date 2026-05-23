@@ -1,6 +1,10 @@
 // Validation schemas for authentication forms
 // Since zod is not available in package.json, implementing basic validation functions
 
+import { UserRole } from '@/lib/types/api';
+
+export type RegisterRole = UserRole.EMPLOYER | UserRole.EMPLOYEE;
+
 export interface LoginFormData {
   email: string;
   password: string;
@@ -11,6 +15,7 @@ export interface RegisterFormData {
   password: string;
   confirmPassword: string;
   fullName: string;
+  role: RegisterRole | '';
   acceptTerms: boolean;
 }
 
@@ -91,6 +96,19 @@ export const validateTermsAcceptance = (accepted: boolean): string | null => {
   return null;
 };
 
+// Role validation
+// Employer: posts tasks and pays for completed work.
+// Employee: completes tasks and earns rewards.
+export const validateRole = (role: string | RegisterRole | ''): string | null => {
+  if (!role) {
+    return 'Please select a role to continue';
+  }
+  if (role !== UserRole.EMPLOYER && role !== UserRole.EMPLOYEE) {
+    return 'Role must be either Employer or Employee';
+  }
+  return null;
+};
+
 // OTP/Code validation
 export const validateCode = (code: string): string | null => {
   if (!code) {
@@ -141,6 +159,11 @@ export const validateRegisterForm = (data: RegisterFormData): Record<string, str
   const confirmPasswordError = validateConfirmPassword(data.password, data.confirmPassword);
   if (confirmPasswordError) {
     errors.confirmPassword = confirmPasswordError;
+  }
+
+  const roleError = validateRole(data.role);
+  if (roleError) {
+    errors.role = roleError;
   }
 
   const termsError = validateTermsAcceptance(data.acceptTerms);
